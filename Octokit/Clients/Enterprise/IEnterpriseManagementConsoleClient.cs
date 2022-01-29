@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Octokit
 {
@@ -16,7 +17,6 @@ namespace Octokit
         /// <remarks>
         /// https://developer.github.com/v3/enterprise/management_console/#check-maintenance-status
         /// </remarks>
-        /// <returns>The <see cref="MaintenanceModeResponse"/>.</returns>
         Task<MaintenanceModeResponse> GetMaintenanceMode(string managementConsolePassword);
 
         /// <summary>
@@ -25,7 +25,31 @@ namespace Octokit
         /// <remarks>
         /// https://developer.github.com/v3/enterprise/management_console/#check-maintenance-status
         /// </remarks>
-        /// <returns>The <see cref="MaintenanceModeResponse"/>.</returns>
         Task<MaintenanceModeResponse> EditMaintenanceMode(UpdateMaintenanceRequest maintenance, string managementConsolePassword);
+
+        /// <summary>
+        /// Gets the authorized SSH keys for the GitHub Enterprise instance
+        /// </summary>
+        /// <remarks>
+        /// https://developer.github.com/v3/enterprise/management_console/#retrieve-authorized-ssh-keys
+        /// </remarks>
+        [ExcludeFromPaginationApiOptionsConventionTest("Pagination is not supported by this endpoint")]
+        Task<IReadOnlyList<AuthorizedKey>> GetAllAuthorizedKeys(string managementConsolePassword);
+
+        /// <summary>
+        /// Adds an authorized SSH key to the GitHub Enterprise instance
+        /// </summary>
+        /// <remarks>
+        /// https://developer.github.com/v3/enterprise/management_console/#add-a-new-authorized-ssh-key
+        /// </remarks>
+        Task<IReadOnlyList<AuthorizedKey>> AddAuthorizedKey(AuthorizedKeyRequest authorizedKey, string managementConsolePassword);
+
+        /// <summary>
+        /// Removes an authorized SSH key from the GitHub Enterprise instance
+        /// </summary>
+        /// <remarks>
+        /// https://developer.github.com/v3/enterprise/management_console/#remove-an-authorized-ssh-key
+        /// </remarks>
+        Task<IReadOnlyList<AuthorizedKey>> DeleteAuthorizedKey(AuthorizedKeyRequest authorizedKey, string managementConsolePassword);
     }
 }

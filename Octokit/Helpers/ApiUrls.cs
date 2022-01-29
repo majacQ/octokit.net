@@ -2571,6 +2571,18 @@ namespace Octokit
             return "setup/api/maintenance?api_key={0}".FormatUri(managementConsolePassword);
         }
 
+        public static Uri EnterpriseManagementConsoleAuthorizedKeys(string managementConsolePassword, Uri baseAddress)
+        {
+            if (baseAddress != null
+                && baseAddress.ToString().EndsWith("/api/v3/", StringComparison.OrdinalIgnoreCase))
+            {
+                // note: leading slash here means the /api/v3/ prefix inherited from baseAddress is ignored
+                return "/setup/api/settings/authorized-keys?api_key={0}".FormatUri(managementConsolePassword);
+            }
+
+            return "setup/api/settings/authorized-keys?api_key={0}".FormatUri(managementConsolePassword);
+        }
+
         public static Uri EnterpriseOrganization()
         {
             return "admin/organizations".FormatUri();
