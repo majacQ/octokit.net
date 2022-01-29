@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace Octokit
 {
     /// <summary>
-    /// Error payload from the API reposnse
+    /// Error payload from the API response
     /// </summary>
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
     [Serializable]
 #endif
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class ApiError
     {
         public ApiError() { }
@@ -39,5 +42,13 @@ namespace Octokit
         /// Additional details about the error
         /// </summary>
         public IReadOnlyList<ApiErrorDetail> Errors { get; protected set; }
+
+        internal string DebuggerDisplay
+        {
+            get
+            {
+                return string.Format(CultureInfo.InvariantCulture, "Message: {0}", Message);
+            }
+        }
     }
 }

@@ -1,11 +1,17 @@
-﻿using System;
+﻿using Octokit.Internal;
+
+using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Net;
+using System.Net.Http;
+#if !NO_SERIALIZABLE
+using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
-using Octokit.Internal;
+#endif
 using Xunit;
+
+using static Octokit.Internal.TestSetup;
 
 namespace Octokit.Tests.Exceptions
 {
@@ -22,7 +28,7 @@ namespace Octokit.Tests.Exceptions
                     {"X-RateLimit-Remaining", "42"},
                     {"X-RateLimit-Reset", "1372700873"}
                 };
-                var response = new Response(HttpStatusCode.Forbidden, null, headers, "application/json");
+                var response = CreateResponse(HttpStatusCode.Forbidden, headers);
 
                 var exception = new RateLimitExceededException(response);
 
@@ -44,9 +50,11 @@ namespace Octokit.Tests.Exceptions
                 {
                     {"X-RateLimit-Limit", "XXX"},
                     {"X-RateLimit-Remaining", "XXXX"},
-                    {"X-RateLimit-Reset", "XXXX"}
+                    {"X-RateLimit-Reset", "XXXX"},
+                    {"Date", "XXX"},
+                    {ApiInfoParser.ReceivedTimeHeaderName, "XXX"},
                 };
-                var response = new Response(HttpStatusCode.Forbidden, null, headers, "application/json");
+                var response = CreateResponse(HttpStatusCode.Forbidden, headers);
 
                 var exception = new RateLimitExceededException(response);
 
@@ -58,12 +66,13 @@ namespace Octokit.Tests.Exceptions
                     "ddd dd MMM yyyy h:mm:ss tt zzz",
                     CultureInfo.InvariantCulture);
                 Assert.Equal(expectedReset, exception.Reset);
+                Assert.Equal(TimeSpan.Zero, exception.GetRetryAfterTimeSpan());
             }
 
             [Fact]
             public void HandlesMissingHeaderValues()
             {
-                var response = new Response(HttpStatusCode.Forbidden, null, new Dictionary<string, string>(), "application/json");
+                var response = CreateResponse(HttpStatusCode.Forbidden);
                 var exception = new RateLimitExceededException(response);
 
                 Assert.Equal(HttpStatusCode.Forbidden, exception.StatusCode);
@@ -74,9 +83,10 @@ namespace Octokit.Tests.Exceptions
                     "ddd dd MMM yyyy h:mm:ss tt zzz",
                     CultureInfo.InvariantCulture);
                 Assert.Equal(expectedReset, exception.Reset);
+                Assert.Equal(TimeSpan.Zero, exception.GetRetryAfterTimeSpan());
             }
 
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
             [Fact]
             public void CanPopulateObjectFromSerializedData()
             {
@@ -85,7 +95,7 @@ namespace Octokit.Tests.Exceptions
                     {"X-RateLimit-Remaining", "42"},
                     {"X-RateLimit-Reset", "1372700873"}
                 };
-                var response = new Response(HttpStatusCode.Forbidden, null, headers, "application/json");
+                var response = CreateResponse(HttpStatusCode.Forbidden, headers);
 
                 var exception = new RateLimitExceededException(response);
 
@@ -107,6 +117,59 @@ namespace Octokit.Tests.Exceptions
                 }
             }
 #endif
+        }
+
+        public class GetRetryAfterTimeSpanMethod
+        {
+            [Fact]
+            public void ReturnsSkewedDistanceFromReset()
+            {
+                // One hour into the future is hopefully long enough to still be
+                // in the future at the end of this method
+                var resetTime = DateTimeOffset.Now + TimeSpan.FromHours(1);
+                var recvDate = new DateTimeOffset(2020, 06, 07, 12, 00, 00, TimeSpan.Zero);
+                var skew = TimeSpan.FromSeconds(-5);
+
+                var response = CreateResponse(HttpStatusCode.Forbidden,
+                    new Dictionary<string, string>
+                    {
+                        ["X-RateLimit-Limit"] = "100",
+                        ["X-RateLimit-Remaining"] = "0",
+                        ["X-RateLimit-Reset"] = resetTime.ToUnixTimeSeconds()
+                            .ToString(CultureInfo.InvariantCulture),
+                        ["Date"] = (recvDate + skew).ToString("r"),
+                        [ApiInfoParser.ReceivedTimeHeaderName] = recvDate.ToString("r"),
+                    });
+                Assert.Equal(skew, response.ApiInfo.ServerTimeDifference);
+                var except = new RateLimitExceededException(response);
+
+                var timeToReset = except.GetRetryAfterTimeSpan();
+                Assert.NotEqual(TimeSpan.Zero, timeToReset);
+                Assert.InRange(timeToReset, TimeSpan.Zero, TimeSpan.FromHours(1));
+            }
+
+            [Fact]
+            public void ReturnsZeroIfSkewedResetInPast()
+            {
+                var beginTime = DateTimeOffset.Now;
+                var resetTime = beginTime - TimeSpan.FromHours(1);
+                
+                var response = CreateResponse(HttpStatusCode.Forbidden,
+                    new Dictionary<string, string>
+                    {
+                        ["X-RateLimit-Limit"] = "100",
+                        ["X-RateLimit-Remaining"] = "0",
+                        ["X-RateLimit-Reset"] = resetTime.ToUnixTimeSeconds()
+                            .ToString(CultureInfo.InvariantCulture),
+                        ["Date"] = beginTime.ToString("r"),
+                        [ApiInfoParser.ReceivedTimeHeaderName] = beginTime.ToString("r"),
+                    });
+                Assert.Equal(TimeSpan.Zero, response.ApiInfo.ServerTimeDifference);
+                var except = new RateLimitExceededException(response);
+
+                var timeToReset = except.GetRetryAfterTimeSpan();
+                Assert.Equal(TimeSpan.Zero, timeToReset);
+            }
         }
     }
 }

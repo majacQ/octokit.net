@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
-using Octokit.Helpers;
 
 namespace Octokit
 {
@@ -15,7 +14,7 @@ namespace Octokit
 
         public WeeklyCommitActivity(IEnumerable<int> days, int total, long week)
         {
-            Ensure.ArgumentNotNull(days, "days");
+            Ensure.ArgumentNotNull(days, nameof(days));
 
             Days = new ReadOnlyCollection<int>(days.ToList());
             Total = total;
@@ -37,10 +36,7 @@ namespace Octokit
         /// </summary>
         public long Week { get; protected set; }
 
-        public DateTimeOffset WeekTimestamp
-        {
-            get { return Week.FromUnixTime(); }
-        }
+        public DateTimeOffset WeekTimestamp => DateTimeOffset.FromUnixTimeSeconds(Week);
 
         /// <summary>
         /// Get the number of commits made on any <see cref="DayOfWeek"/>

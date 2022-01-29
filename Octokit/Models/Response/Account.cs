@@ -9,7 +9,7 @@ namespace Octokit
     {
         protected Account() { }
 
-        protected Account(string avatarUrl, string bio, string blog, int collaborators, string company, DateTimeOffset createdAt, int diskUsage, string email, int followers, int following, bool? hireable, string htmlUrl, int totalPrivateRepos, int id, string location, string login, string name, int ownedPrivateRepos, Plan plan, int privateGists, int publicGists, int publicRepos, AccountType type, string url)
+        protected Account(string avatarUrl, string bio, string blog, int collaborators, string company, DateTimeOffset createdAt, int diskUsage, string email, int followers, int following, bool? hireable, string htmlUrl, int totalPrivateRepos, int id, string location, string login, string name, string nodeId, int ownedPrivateRepos, Plan plan, int privateGists, int publicGists, int publicRepos, AccountType type, string url)
         {
             AvatarUrl = avatarUrl;
             Bio = bio;
@@ -28,6 +28,7 @@ namespace Octokit
             Location = location;
             Login = login;
             Name = name;
+            NodeId = nodeId;
             OwnedPrivateRepos = ownedPrivateRepos;
             Plan = plan;
             PrivateGists = privateGists;
@@ -55,7 +56,7 @@ namespace Octokit
         /// <summary>
         /// Number of collaborators the account has.
         /// </summary>
-        public int Collaborators { get; protected set; }
+        public int? Collaborators { get; protected set; }
 
         /// <summary>
         /// Company the account works for.
@@ -70,7 +71,7 @@ namespace Octokit
         /// <summary>
         /// Amount of disk space the account is using.
         /// </summary>
-        public int DiskUsage { get; protected set; }
+        public int? DiskUsage { get; protected set; }
 
         /// <summary>
         /// The account's email.
@@ -78,7 +79,7 @@ namespace Octokit
         public string Email { get; protected set; }
 
         /// <summary>
-        /// Number of follwers the account has.
+        /// Number of followers the account has.
         /// </summary>
         public int Followers { get; protected set; }
 
@@ -90,7 +91,7 @@ namespace Octokit
         /// <summary>
         /// Indicates whether the account is currently hireable.
         /// </summary>
-        /// <value>True if the account is hirable; otherwise, false.</value>
+        /// <value>True if the account is hireable; otherwise, false.</value>
         public bool? Hireable { get; protected set; }
 
         /// <summary>
@@ -99,9 +100,14 @@ namespace Octokit
         public string HtmlUrl { get; protected set; }
 
         /// <summary>
-        /// The account's system-wide unique ID.
+        /// The account's system-wide unique Id.
         /// </summary>
         public int Id { get; protected set; }
+
+        /// <summary>
+        /// GraphQL Node Id
+        /// </summary>
+        public string NodeId { get; protected set; }
 
         /// <summary>
         /// The account's geographic location.
@@ -138,7 +144,7 @@ namespace Octokit
         /// <summary>
         /// Number of private gists the account has created.
         /// </summary>
-        public int PrivateGists { get; protected set; }
+        public int? PrivateGists { get; protected set; }
 
         /// <summary>
         /// Number of public gists the account has created.

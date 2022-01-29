@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-#if NET_45
 using System.Collections.ObjectModel;
-#endif
 
 namespace Octokit
 {
     /// <summary>
-    /// Extra information returned as part of each api response.
+    /// Extra information returned as part of each API response.
     /// </summary>
     public class ApiInfo
     {
@@ -15,16 +13,19 @@ namespace Octokit
             IList<string> oauthScopes,
             IList<string> acceptedOauthScopes,
             string etag,
-            RateLimit rateLimit)
+            RateLimit rateLimit,
+            TimeSpan serverTimeDifference = default)
         {
-            Ensure.ArgumentNotNull(links, "links");
-            Ensure.ArgumentNotNull(oauthScopes, "oauthScopes");
+            Ensure.ArgumentNotNull(links, nameof(links));
+            Ensure.ArgumentNotNull(oauthScopes, nameof(oauthScopes));
+            Ensure.ArgumentNotNull(acceptedOauthScopes, nameof(acceptedOauthScopes));
 
             Links = new ReadOnlyDictionary<string, Uri>(links);
             OauthScopes = new ReadOnlyCollection<string>(oauthScopes);
             AcceptedOauthScopes = new ReadOnlyCollection<string>(acceptedOauthScopes);
             Etag = etag;
             RateLimit = rateLimit;
+            ServerTimeDifference = serverTimeDifference;
         }
 
         /// <summary>
@@ -53,21 +54,28 @@ namespace Octokit
         public RateLimit RateLimit { get; private set; }
 
         /// <summary>
+        /// The best-effort time difference between the server and the client.
+        /// </summary>
+        /// <remarks>
+        /// If both the server and the client have reasonably accurate clocks,
+        /// the value of this property will be close to <see cref="TimeSpan.Zero"/>.
+        /// The actual value is sensitive to network transmission and processing 
+        /// delays.
+        /// </remarks>
+        public TimeSpan ServerTimeDifference { get; }
+
+        /// <summary>
         /// Allows you to clone ApiInfo 
         /// </summary>
         /// <returns>A clone of <seealso cref="ApiInfo"/></returns>
         public ApiInfo Clone()
         {
-            // Seem to have to do this to pass a whole bunch of tests (for example Octokit.Tests.Clients.EventsClientTests.DeserializesCommitCommentEventCorrectly)
-            // I believe this has something to do with the Mocking framework.
-            if (Links == null || OauthScopes == null || RateLimit == null || Etag == null)
-                return null;
-
             return new ApiInfo(Links.Clone(),
-                                OauthScopes.Clone(),
-                                AcceptedOauthScopes.Clone(),
-                                new string(this.Etag.ToCharArray()),
-                                RateLimit.Clone());
+                               OauthScopes.Clone(),
+                               AcceptedOauthScopes.Clone(),
+                               Etag != null ? new string(Etag.ToCharArray()) : null,
+                               RateLimit != null ? RateLimit.Clone() : null,
+                               ServerTimeDifference);
         }
     }
 }

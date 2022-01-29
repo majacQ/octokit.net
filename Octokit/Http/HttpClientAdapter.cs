@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -20,10 +22,37 @@ namespace Octokit.Internal
     {
         readonly HttpClient _http;
 
+        public const string RedirectCountKey = "RedirectCount";
+
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public HttpClientAdapter(Func<HttpMessageHandler> getHandler)
         {
-            Ensure.ArgumentNotNull(getHandler, "getHandler");
+            Ensure.ArgumentNotNull(getHandler, nameof(getHandler));
+
+#if HAS_SERVICEPOINTMANAGER
+            // GitHub API requires TLS1.2 as of February 2018
+            //
+            // .NET Framework before 4.6 did not enable TLS1.2 by default
+            //
+            // Even though this is an AppDomain wide setting, the decision was made for Octokit to
+            // ensure that TLS1.2 is enabled so that existing applications using Octokit did not need to
+            // make changes outside Octokit to continue to work with GitHub API
+            //
+            // *Update*
+            // .NET Framework 4.7 introduced a new value (SecurityProtocolType.SystemDefault = 0)
+            // which defers enabled protocols to operating system defaults
+            // If this is the current value we shouldn't do anything, as that would cause TLS1.2 to be the ONLY enabled protocol!
+            //
+            // See https://docs.microsoft.com/en-us/dotnet/api/system.net.securityprotocoltype?view=netframework-4.7
+            // See https://github.com/octokit/octokit.net/issues/1914
+
+            // Only apply when current setting is not SystemDefault (0) added in .NET 4.7
+            if ((int)ServicePointManager.SecurityProtocol != 0)
+            {
+                // Add Tls1.2 to the existing enabled protocols
+                ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            }
+#endif
 
             _http = new HttpClient(new RedirectHandler { InnerHandler = getHandler() });
         }
@@ -36,15 +65,14 @@ namespace Octokit.Internal
         /// <returns>A <see cref="Task" /> of <see cref="IResponse"/></returns>
         public async Task<IResponse> Send(IRequest request, CancellationToken cancellationToken)
         {
-            Ensure.ArgumentNotNull(request, "request");
+            Ensure.ArgumentNotNull(request, nameof(request));
 
             var cancellationTokenForRequest = GetCancellationTokenForRequest(request, cancellationToken);
 
             using (var requestMessage = BuildRequestMessage(request))
             {
-                // Make the request
-                var responseMessage = await _http.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationTokenForRequest)
-                                                .ConfigureAwait(false);
+                var responseMessage = await SendAsync(requestMessage, cancellationTokenForRequest).ConfigureAwait(false);
+
                 return await BuildResponse(responseMessage).ConfigureAwait(false);
             }
         }
@@ -64,16 +92,17 @@ namespace Octokit.Internal
             return cancellationTokenForRequest;
         }
 
-        protected async virtual Task<IResponse> BuildResponse(HttpResponseMessage responseMessage)
+        protected virtual async Task<IResponse> BuildResponse(HttpResponseMessage responseMessage)
         {
-            Ensure.ArgumentNotNull(responseMessage, "responseMessage");
+            Ensure.ArgumentNotNull(responseMessage, nameof(responseMessage));
 
             object responseBody = null;
             string contentType = null;
 
-            // We added support for downloading images,zip-files and application/octet-stream. 
+            // We added support for downloading images,zip-files and application/octet-stream.
             // Let's constrain this appropriately.
             var binaryContentTypes = new[] {
+                AcceptHeaders.RawContentMediaType,
                 "application/zip" ,
                 "application/x-gzip" ,
                 "application/octet-stream"};
@@ -96,16 +125,28 @@ namespace Octokit.Internal
                 }
             }
 
+            var responseHeaders = responseMessage.Headers.ToDictionary(h => h.Key, h => h.Value.First());
+
+            // Add Client response received time as a synthetic header
+            const string receivedTimeHeaderName = ApiInfoParser.ReceivedTimeHeaderName;
+            if (responseMessage.RequestMessage?.Properties is IDictionary<string, object> reqProperties
+                && reqProperties.TryGetValue(receivedTimeHeaderName, out object receivedTimeObj)
+                && receivedTimeObj is string receivedTimeString
+                && !responseHeaders.ContainsKey(receivedTimeHeaderName))
+            {
+                responseHeaders[receivedTimeHeaderName] = receivedTimeString;
+            }
+
             return new Response(
                 responseMessage.StatusCode,
                 responseBody,
-                responseMessage.Headers.ToDictionary(h => h.Key, h => h.Value.First()),
+                responseHeaders,
                 contentType);
         }
 
         protected virtual HttpRequestMessage BuildRequestMessage(IRequest request)
         {
-            Ensure.ArgumentNotNull(request, "request");
+            Ensure.ArgumentNotNull(request, nameof(request));
             HttpRequestMessage requestMessage = null;
             try
             {
@@ -169,19 +210,26 @@ namespace Octokit.Internal
                 if (_http != null) _http.Dispose();
             }
         }
-    }
 
-    internal class RedirectHandler : DelegatingHandler
-    {
-        public const string RedirectCountKey = "RedirectCount";
-        public bool Enabled { get; set; }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            var response = await base.SendAsync(request, cancellationToken);
+            // Clone the request/content in case we get a redirect
+            var clonedRequest = await CloneHttpRequestMessageAsync(request).ConfigureAwait(false);
 
-            // Can't redirect without somewhere to redirect too.  Throw?
-            if (response.Headers.Location == null) return response;
+            // Send initial response
+            var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            // Need to determine time on client computer as soon as possible.
+            var receivedTime = DateTimeOffset.Now;
+            // Since Properties are stored as objects, serialize to HTTP round-tripping string (Format: r)
+            // Resolution is limited to one-second, matching the resolution of the HTTP Date header
+            request.Properties[ApiInfoParser.ReceivedTimeHeaderName] = 
+                receivedTime.ToString("r", CultureInfo.InvariantCulture);
+
+            // Can't redirect without somewhere to redirect to.
+            if (response.Headers.Location == null)
+            {
+                return response;
+            }
 
             // Don't redirect if we exceed max number of redirects
             var redirectCount = 0;
@@ -193,7 +241,6 @@ namespace Octokit.Internal
             {
                 throw new InvalidOperationException("The redirect count for this request has been exceeded. Aborting.");
             }
-            request.Properties[RedirectCountKey] = ++redirectCount;
 
             if (response.StatusCode == HttpStatusCode.MovedPermanently
                         || response.StatusCode == HttpStatusCode.Redirect
@@ -202,55 +249,79 @@ namespace Octokit.Internal
                         || response.StatusCode == HttpStatusCode.TemporaryRedirect
                         || (int)response.StatusCode == 308)
             {
-                var newRequest = CopyRequest(response.RequestMessage);
-
                 if (response.StatusCode == HttpStatusCode.SeeOther)
                 {
-                    newRequest.Content = null;
-                    newRequest.Method = HttpMethod.Get;
+                    clonedRequest.Content = null;
+                    clonedRequest.Method = HttpMethod.Get;
                 }
-                else
+
+                // Increment the redirect count
+                clonedRequest.Properties[RedirectCountKey] = ++redirectCount;
+
+                // Set the new Uri based on location header
+                clonedRequest.RequestUri = response.Headers.Location;
+
+                // Clear authentication if redirected to a different host
+                if (string.Compare(clonedRequest.RequestUri.Host, request.RequestUri.Host, StringComparison.OrdinalIgnoreCase) != 0)
                 {
-                    if (request.Content != null && request.Content.Headers.ContentLength != 0)
-                    {
-                        var stream = await request.Content.ReadAsStreamAsync();
-                        if (stream.CanSeek)
-                        {
-                            stream.Position = 0;
-                        }
-                        else
-                        {
-                            throw new Exception("Cannot redirect a request with an unbuffered body");
-                        }
-                        newRequest.Content = new StreamContent(stream);
-                    }
+                    clonedRequest.Headers.Authorization = null;
                 }
-                newRequest.RequestUri = response.Headers.Location;
-                if (string.Compare(newRequest.RequestUri.Host, request.RequestUri.Host, StringComparison.OrdinalIgnoreCase) != 0)
-                {
-                    newRequest.Headers.Authorization = null;
-                }
-                response = await SendAsync(newRequest, cancellationToken);
+
+                // Send redirected request
+                response = await SendAsync(clonedRequest, cancellationToken).ConfigureAwait(false);
             }
 
             return response;
         }
 
-        [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        private static HttpRequestMessage CopyRequest(HttpRequestMessage oldRequest)
+        public static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage oldRequest)
         {
-            var newrequest = new HttpRequestMessage(oldRequest.Method, oldRequest.RequestUri);
+            var newRequest = new HttpRequestMessage(oldRequest.Method, oldRequest.RequestUri);
+
+            // Copy the request's content (via a MemoryStream) into the cloned object
+            var ms = new MemoryStream();
+            if (oldRequest.Content != null)
+            {
+                await oldRequest.Content.CopyToAsync(ms).ConfigureAwait(false);
+                ms.Position = 0;
+                newRequest.Content = new StreamContent(ms);
+
+                // Copy the content headers
+                if (oldRequest.Content.Headers != null)
+                {
+                    foreach (var h in oldRequest.Content.Headers)
+                    {
+                        newRequest.Content.Headers.Add(h.Key, h.Value);
+                    }
+                }
+            }
+
+            newRequest.Version = oldRequest.Version;
 
             foreach (var header in oldRequest.Headers)
             {
-                newrequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-            foreach (var property in oldRequest.Properties)
-            {
-                newrequest.Properties.Add(property);
+                newRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
             }
 
-            return newrequest;
+            foreach (var property in oldRequest.Properties)
+            {
+                newRequest.Properties.Add(property);
+            }
+
+            return newRequest;
         }
+
+        /// <summary>
+        /// Set the GitHub Api request timeout.
+        /// </summary>
+        /// <param name="timeout">The Timeout value</param>
+        public void SetRequestTimeout(TimeSpan timeout)
+        {
+            _http.Timeout = timeout;
+        }
+    }
+
+    internal class RedirectHandler : DelegatingHandler
+    {
     }
 }

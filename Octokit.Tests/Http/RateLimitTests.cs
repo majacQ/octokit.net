@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+#if !NO_SERIALIZABLE
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+#endif
 using Xunit;
 
 namespace Octokit.Tests.Http
@@ -11,11 +13,6 @@ namespace Octokit.Tests.Http
     {
         public class TheConstructor
         {
-            public void Foo()
-            {
-                Console.WriteLine(new DateTimeOffset(1970, 1, 1, 0, 0, 0, TimeSpan.Zero).Ticks);
-            }
-
             [Fact]
             public void ParsesRateLimitsFromHeaders()
             {
@@ -74,7 +71,7 @@ namespace Octokit.Tests.Http
                 Assert.Equal(expectedReset, rateLimit.Reset);
             }
 
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
             [Fact]
             public void CanPopulateObjectFromSerializedData()
             {
@@ -107,7 +104,8 @@ namespace Octokit.Tests.Http
             [Fact]
             public void EnsuresHeadersNotNull()
             {
-                Assert.Throws<ArgumentNullException>(() => new RateLimit(null));
+                IDictionary<string, string> dictionary = null;
+                Assert.Throws<ArgumentNullException>(() => new RateLimit(dictionary));
             }
         }
 
@@ -120,17 +118,13 @@ namespace Octokit.Tests.Http
 
                 var clone = original.Clone();
 
-                // Note the use of Assert.NotSame tests for value types - this should continue to test should the underlying 
-                // model are changed to Object types
+                // We want to ensure the original and clone are different objects but with
+                // the same values populated
                 Assert.NotSame(original, clone);
                 Assert.Equal(original.Limit, clone.Limit);
-                Assert.NotSame(original.Limit, clone.Limit);
                 Assert.Equal(original.Remaining, clone.Remaining);
-                Assert.NotSame(original.Remaining, clone.Remaining);
                 Assert.Equal(original.ResetAsUtcEpochSeconds, clone.ResetAsUtcEpochSeconds);
-                Assert.NotSame(original.ResetAsUtcEpochSeconds, clone.ResetAsUtcEpochSeconds);
                 Assert.Equal(original.Reset, clone.Reset);
-                Assert.NotSame(original.Reset, clone.Reset);
             }
         }
     }

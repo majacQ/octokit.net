@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Net;
 
@@ -9,13 +10,15 @@ namespace Octokit.Internal
     /// </summary>
     internal class Response : IResponse
     {
+        [Obsolete("Use the constructor with maximum parameters to avoid shortcuts")]
         public Response() : this(new Dictionary<string, string>())
         {
         }
 
+        [Obsolete("Use the constructor with maximum parameters to avoid shortcuts")]
         public Response(IDictionary<string, string> headers)
         {
-            Ensure.ArgumentNotNull(headers, "headers");
+            Ensure.ArgumentNotNull(headers, nameof(headers));
 
             Headers = new ReadOnlyDictionary<string, string>(headers);
             ApiInfo = ApiInfoParser.ParseResponseHeaders(headers);
@@ -23,7 +26,7 @@ namespace Octokit.Internal
 
         public Response(HttpStatusCode statusCode, object body, IDictionary<string, string> headers, string contentType)
         {
-            Ensure.ArgumentNotNull(headers, "headers");
+            Ensure.ArgumentNotNull(headers, nameof(headers));
 
             StatusCode = statusCode;
             Body = body;

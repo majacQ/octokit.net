@@ -1,18 +1,46 @@
 ﻿using System;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using NSubstitute;
 using Octokit.Internal;
 using Xunit;
-using Xunit.Extensions;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Linq;
 
 namespace Octokit.Tests
 {
     public class GitHubClientTests
     {
-        public class TheConstructor
+        public class TheCtor
         {
+            [Fact]
+            public void EnsuresNonNullArguments()
+            {
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient((IConnection)null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient((ProductHeaderValue)null));
+
+                var productInformation = new ProductHeaderValue("UnitTest");
+                var baseAddress = new Uri("http://github.com");
+                var credentialStore = Substitute.For<ICredentialStore>();
+
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(productInformation, (ICredentialStore)null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, credentialStore));
+
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(productInformation, (Uri)null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, baseAddress));
+
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, (ICredentialStore)null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, (Uri)null));
+
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(productInformation, null, null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, credentialStore, null));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, null, baseAddress));
+
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(null, credentialStore, baseAddress));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(productInformation, null, baseAddress));
+                Assert.Throws<ArgumentNullException>(() => new GitHubClient(productInformation, credentialStore, null));
+            }
+
             [Fact]
             public void CreatesAnonymousClientByDefault()
             {
@@ -98,7 +126,7 @@ namespace Octokit.Tests
             public void IsRetrievedFromCredentialStore()
             {
                 var credentialStore = Substitute.For<ICredentialStore>();
-                credentialStore.GetCredentials().Returns(Task.Factory.StartNew(() => new Credentials("foo", "bar")));
+                credentialStore.GetCredentials().Returns(Task.FromResult(new Credentials("foo", "bar")));
                 var client = new GitHubClient(new ProductHeaderValue("OctokitTests"), credentialStore);
 
                 Assert.Equal("foo", client.Credentials.Login);
@@ -147,7 +175,7 @@ namespace Octokit.Tests
                                 },
                                 new List<string>
                                 {
-                                    "user",
+                                    "user"
                                 },
                                 new List<string>
                                 {
@@ -168,6 +196,70 @@ namespace Octokit.Tests
                 Assert.NotNull(result);
 
                 var temp = connection.Received(1).GetLastApiInfo();
+            }
+        }
+
+        public class TheSetRequestTimeoutMethod
+        {
+            [Fact]
+            public void SetsTheTimeoutOnTheUnderlyingHttpClient()
+            {
+                var httpClient = Substitute.For<IHttpClient>();
+                var client = new GitHubClient(new Connection(new ProductHeaderValue("OctokitTests"), httpClient));
+
+                client.SetRequestTimeout(TimeSpan.FromSeconds(15));
+
+
+                httpClient.Received(1).SetRequestTimeout(TimeSpan.FromSeconds(15));
+            }
+        }
+
+        public class TheNestedClients
+        {
+            private static void VisitAllClientTypes(Type rootType, HashSet<Type> result)
+            {
+                const BindingFlags ifPropBinding = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                if (!result.Add(rootType))
+                    return;
+
+                foreach (var pi in rootType.GetProperties(ifPropBinding).Where(pi => pi.CanRead && pi.PropertyType.Name.EndsWith("Client", StringComparison.Ordinal)))
+                {
+                    VisitAllClientTypes(pi.PropertyType, result);
+                }
+            }
+
+            internal static IEnumerable<Type> GetGitHubClientNestedInterfaces()
+            {
+                var visitedTypes = new HashSet<Type>();
+                var rootType = typeof(GitHubClient);
+                VisitAllClientTypes(rootType, visitedTypes);
+                visitedTypes.Remove(rootType);
+                return visitedTypes;
+            }
+
+            public static IEnumerable<object[]> GetGitHubClientNestedInterfacesMemberData() =>
+                GetGitHubClientNestedInterfaces().Select(t => new[] { t });
+
+            [Theory]
+            [MemberData(nameof(GetGitHubClientNestedInterfacesMemberData))]
+            public void HasImplementationClassWithIApiConnectionCtor(Type clientInterface)
+            {
+                var octokitAssembly = typeof(GitHubClient).Assembly;
+
+                var implTypes = octokitAssembly.GetTypes()
+                    .Where(t => t.IsClass && t.IsPublic)
+                    .Where(t => t.GetInterfaces().Contains(clientInterface))
+                    .ToList();
+
+                Assert.Single(implTypes, t =>
+                {
+                    const BindingFlags ctorBinding = BindingFlags.Instance | BindingFlags.Public;
+                    var ctor = t.GetConstructor(ctorBinding, Type.DefaultBinder,
+                        new[] { typeof(IApiConnection) }, null)
+                        ?? t.GetConstructor(ctorBinding, Type.DefaultBinder,
+                        new[] { typeof(IConnection) }, null);
+                    return !(ctor is null);
+                });
             }
         }
     }

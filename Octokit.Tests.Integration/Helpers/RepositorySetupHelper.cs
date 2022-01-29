@@ -16,7 +16,7 @@ namespace Octokit.Tests.Integration.Helpers
                     Content = c.Value,
                     Encoding = EncodingType.Utf8
                 };
-                var baselineBlobResult = await client.GitDatabase.Blob.Create(repository.Owner.Login, repository.Name, baselineBlob);
+                var baselineBlobResult = await client.Git.Blob.Create(repository.Owner.Login, repository.Name, baselineBlob);
 
                 collection.Add(new NewTreeItem
                 {
@@ -33,32 +33,55 @@ namespace Octokit.Tests.Integration.Helpers
                 newTree.Tree.Add(item);
             }
 
-            return await client.GitDatabase.Tree.Create(repository.Owner.Login, repository.Name, newTree);
+            return await client.Git.Tree.Create(repository.Owner.Login, repository.Name, newTree);
         }
 
         public static async Task<Commit> CreateCommit(this IGitHubClient client, Repository repository, string message, string sha, string parent)
         {
             var newCommit = new NewCommit(message, sha, parent);
-            return await client.GitDatabase.Commit.Create(repository.Owner.Login, repository.Name, newCommit);
+            return await client.Git.Commit.Create(repository.Owner.Login, repository.Name, newCommit);
         }
 
         public static async Task<Reference> CreateTheWorld(this IGitHubClient client, Repository repository)
         {
-            var master = await client.GitDatabase.Reference.Get(repository.Owner.Login, repository.Name, "heads/master");
+            var master = await client.Git.Reference.Get(repository.Owner.Login, repository.Name, "heads/master");
 
             // create new commit for master branch
             var newMasterTree = await client.CreateTree(repository, new Dictionary<string, string> { { "README.md", "Hello World!" } });
             var newMaster = await client.CreateCommit(repository, "baseline for pull request", newMasterTree.Sha, master.Object.Sha);
 
             // update master
-            await client.GitDatabase.Reference.Update(repository.Owner.Login, repository.Name, "heads/master", new ReferenceUpdate(newMaster.Sha));
+            await client.Git.Reference.Update(repository.Owner.Login, repository.Name, "heads/master", new ReferenceUpdate(newMaster.Sha));
 
             // create new commit for feature branch
-            var featureBranchTree = await client.CreateTree(repository, new Dictionary<string, string> { { "README.md", "I am overwriting this blob with something new" } });
+            var featureBranchTree = await client.CreateTree(repository, new Dictionary<string, string> { { "README.md", "I am overwriting this blob with something new\nand a second line too" } });
             var featureBranchCommit = await client.CreateCommit(repository, "this is the commit to merge into the pull request", featureBranchTree.Sha, newMaster.Sha);
 
             // create branch
-            return await client.GitDatabase.Reference.Create(repository.Owner.Login, repository.Name, new NewReference("refs/heads/my-branch", featureBranchCommit.Sha));
+            return await client.Git.Reference.Create(repository.Owner.Login, repository.Name, new NewReference("refs/heads/my-branch", featureBranchCommit.Sha));
+        }
+
+        public static async Task<PullRequest> CreatePullRequest(this IGitHubClient client, Repository repository, string branch = "my-branch")
+        {
+            var pullRequest = new NewPullRequest("Nice title for the pull request", branch, "master");
+            var createdPullRequest = await client.PullRequest.Create(repository.Owner.Login, repository.Name, pullRequest);
+
+            return createdPullRequest;
+        }
+
+        public static async Task<PullRequestReview> CreatePullRequestReview(this IGitHubClient client, Repository repository, int number, string body, PullRequestReviewEvent? @event = null, string commitId = null, List<DraftPullRequestReviewComment> comments = null)
+        {
+            var review = new PullRequestReviewCreate()
+            {
+                CommitId = commitId,
+                Body = body,
+                Event = @event,
+                Comments = comments
+            };
+
+            var createdReview = await client.PullRequest.Review.Create(repository.Owner.Login, repository.Name, number, review);
+
+            return createdReview;
         }
     }
 }

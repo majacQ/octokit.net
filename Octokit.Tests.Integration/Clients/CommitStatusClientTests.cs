@@ -17,13 +17,156 @@ public class CommitStatusClientTests
             // to go through the rigamarole of creating it all. But ideally, that's exactly what we'd do.
 
             var github = Helper.GetAuthenticatedClient();
-            var statuses = await github.Repository.CommitStatus.GetAll(
+
+            var statuses = await github.Repository.Status.GetAll(
             "rails",
             "rails",
             "94b857899506612956bb542e28e292308accb908");
             Assert.Equal(2, statuses.Count);
             Assert.Equal(CommitState.Failure, statuses[0].State);
             Assert.Equal(CommitState.Pending, statuses[1].State);
+        }
+
+        [IntegrationTest]
+        public async Task CanRetrieveStatusesWithRepositoryId()
+        {
+            // Figured it was easier to grab the public status of a public repository for now than
+            // to go through the rigamarole of creating it all. But ideally, that's exactly what we'd do.
+
+            var github = Helper.GetAuthenticatedClient();
+
+            var statuses = await github.Repository.Status.GetAll(
+            8514,
+            "94b857899506612956bb542e28e292308accb908");
+            Assert.Equal(2, statuses.Count);
+            Assert.Equal(CommitState.Failure, statuses[0].State);
+            Assert.Equal(CommitState.Pending, statuses[1].State);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsCorrectCountOfStatusesWithoutStart()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var options = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1
+            };
+
+            var statuses = await github.Repository.Status.GetAll("rails", "rails",
+                                    "94b857899506612956bb542e28e292308accb908", options);
+
+            Assert.Equal(1, statuses.Count);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsCorrectCountOfStatusesWithStart()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var options = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 1
+            };
+
+            var statuses = await github.Repository.Status.GetAll("rails", "rails",
+                                    "94b857899506612956bb542e28e292308accb908", options);
+
+            Assert.Equal(1, statuses.Count);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsDistinctStatusesBasedOnStartPage()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var startOptions = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 1
+            };
+
+            var firstPage = await github.Repository.Status.GetAll("rails", "rails", "94b857899506612956bb542e28e292308accb908", startOptions);
+
+            var skipStartOptions = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 2
+            };
+
+            var secondPage = await github.Repository.Status.GetAll("rails", "rails", "94b857899506612956bb542e28e292308accb908", skipStartOptions);
+
+            Assert.Equal(1, firstPage.Count);
+            Assert.Equal(1, secondPage.Count);
+            Assert.NotEqual(firstPage[0].Id, secondPage[0].Id);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsCorrectCountOfStatusesWithRepositoryIdWithoutStart()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var options = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1
+            };
+
+            var statuses = await github.Repository.Status.GetAll(8514,
+                                    "94b857899506612956bb542e28e292308accb908", options);
+
+            Assert.Equal(1, statuses.Count);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsCorrectCountOfStatusesWithRepositoryIdWithStart()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var options = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 1
+            };
+
+            var statuses = await github.Repository.Status.GetAll(8514,
+                                    "94b857899506612956bb542e28e292308accb908", options);
+
+            Assert.Equal(1, statuses.Count);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsDistinctStatusesBasedOnStartPageWithRepositoryId()
+        {
+            var github = Helper.GetAuthenticatedClient();
+
+            var startOptions = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 1
+            };
+
+            var firstPage = await github.Repository.Status.GetAll(8514, "94b857899506612956bb542e28e292308accb908", startOptions);
+
+            var skipStartOptions = new ApiOptions
+            {
+                PageCount = 1,
+                PageSize = 1,
+                StartPage = 2
+            };
+
+            var secondPage = await github.Repository.Status.GetAll(8514, "94b857899506612956bb542e28e292308accb908", skipStartOptions);
+
+            Assert.Equal(1, firstPage.Count);
+            Assert.Equal(1, secondPage.Count);
+            Assert.NotEqual(firstPage[0].Id, secondPage[0].Id);
         }
     }
 
@@ -33,9 +176,24 @@ public class CommitStatusClientTests
         public async Task CanRetrieveCombinedStatus()
         {
             var github = Helper.GetAuthenticatedClient();
-            var status = await github.Repository.CommitStatus.GetCombined(
+            var status = await github.Repository.Status.GetCombined(
             "libgit2",
             "libgit2sharp",
+            "f54529997b6ad841be524654d9e9074ab8e7d41d");
+            Assert.Equal(CommitState.Success, status.State);
+            Assert.Equal("f54529997b6ad841be524654d9e9074ab8e7d41d", status.Sha);
+            Assert.Equal(2, status.TotalCount);
+            Assert.Equal(2, status.Statuses.Count);
+            Assert.True(status.Statuses.All(x => x.State == CommitState.Success));
+            Assert.Equal("The Travis CI build passed", status.Statuses[0].Description);
+        }
+
+        [IntegrationTest]
+        public async Task CanRetrieveCombinedStatusWithRepositoryId()
+        {
+            var github = Helper.GetAuthenticatedClient();
+            var status = await github.Repository.Status.GetCombined(
+            1415168,
             "f54529997b6ad841be524654d9e9074ab8e7d41d");
             Assert.Equal(CommitState.Success, status.State);
             Assert.Equal("f54529997b6ad841be524654d9e9074ab8e7d41d", status.Sha);
@@ -69,7 +227,7 @@ public class CommitStatusClientTests
                 Description = "this is a test status"
             };
 
-            var result = await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            var result = await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
             Assert.Equal(CommitState.Pending, result.State);
         }
@@ -85,9 +243,9 @@ public class CommitStatusClientTests
                 Description = "this is a test status"
             };
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
-            var statuses = await _github.Repository.CommitStatus.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
+            var statuses = await _github.Repository.Status.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
 
             Assert.Equal(1, statuses.Count);
             Assert.Equal(CommitState.Pending, statuses[0].State);
@@ -104,13 +262,13 @@ public class CommitStatusClientTests
                 Description = "this is a test status"
             };
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
             status.State = CommitState.Success;
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
-            var statuses = await _github.Repository.CommitStatus.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
+            var statuses = await _github.Repository.Status.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
 
             Assert.Equal(2, statuses.Count);
             Assert.Equal(CommitState.Success, statuses[0].State);
@@ -127,9 +285,9 @@ public class CommitStatusClientTests
                 Description = "this is a test status"
             };
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
-            var statuses = await _github.Repository.CommitStatus.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
+            var statuses = await _github.Repository.Status.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
 
             Assert.Equal(1, statuses.Count);
             Assert.Equal("default", statuses[0].Context);
@@ -147,13 +305,13 @@ public class CommitStatusClientTests
                 Context = "System A"
             };
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
             status.Context = "System B";
 
-            await _github.Repository.CommitStatus.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
+            await _github.Repository.Status.Create(_context.RepositoryOwner, _context.RepositoryName, commit.Sha, status);
 
-            var statuses = await _github.Repository.CommitStatus.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
+            var statuses = await _github.Repository.Status.GetAll(_context.RepositoryOwner, _context.RepositoryName, commit.Sha);
 
             Assert.Equal(2, statuses.Count);
             Assert.Equal("System B", statuses[0].Context);
@@ -167,7 +325,7 @@ public class CommitStatusClientTests
                 Content = "Hello World!",
                 Encoding = EncodingType.Utf8
             };
-            var blobResult = await client.GitDatabase.Blob.Create(_context.RepositoryOwner, _context.RepositoryName, blob);
+            var blobResult = await client.Git.Blob.Create(_context.RepositoryOwner, _context.RepositoryName, blob);
 
             var newTree = new NewTree();
             newTree.Tree.Add(new NewTreeItem
@@ -178,11 +336,11 @@ public class CommitStatusClientTests
                 Sha = blobResult.Sha
             });
 
-            var treeResult = await client.GitDatabase.Tree.Create(_context.RepositoryOwner, _context.RepositoryName, newTree);
+            var treeResult = await client.Git.Tree.Create(_context.RepositoryOwner, _context.RepositoryName, newTree);
 
             var newCommit = new NewCommit("test-commit", treeResult.Sha);
 
-            return await client.GitDatabase.Commit.Create(_context.RepositoryOwner, _context.RepositoryName, newCommit);
+            return await client.Git.Commit.Create(_context.RepositoryOwner, _context.RepositoryName, newCommit);
         }
 
         public void Dispose()

@@ -1,13 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 
 namespace Octokit
 {
     /// <summary>
-    /// Used to create anarbitrary markdown
+    /// Used to create an arbitrary markdown
     /// </summary>
     /// <remarks>
     /// API: https://developer.github.com/v3/markdown/#render-an-arbitrary-markdown-document
@@ -83,7 +81,7 @@ namespace Octokit
         {
             if (mode != _markdown && mode != _gfm)
             {
-                throw (new FormatException("The mode must be either 'markdown' or 'gfm'"));
+                throw new FormatException("The mode must be either 'markdown' or 'gfm'");
             }
             else
                 return mode;

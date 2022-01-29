@@ -11,8 +11,6 @@ namespace Octokit.Internal
     /// </summary>
     public class JsonHttpPipeline
     {
-        private const string v3ApiVersion = "application/vnd.github.quicksilver-preview+json; charset=utf-8, application/vnd.github.v3+json; charset=utf-8";
-
         readonly IJsonSerializer _serializer;
 
         public JsonHttpPipeline() : this(new SimpleJsonSerializer())
@@ -21,18 +19,18 @@ namespace Octokit.Internal
 
         public JsonHttpPipeline(IJsonSerializer serializer)
         {
-            Ensure.ArgumentNotNull(serializer, "serializer");
+            Ensure.ArgumentNotNull(serializer, nameof(serializer));
 
             _serializer = serializer;
         }
 
         public void SerializeRequest(IRequest request)
         {
-            Ensure.ArgumentNotNull(request, "request");
+            Ensure.ArgumentNotNull(request, nameof(request));
 
             if (!request.Headers.ContainsKey("Accept"))
             {
-                request.Headers["Accept"] = v3ApiVersion;
+                request.Headers["Accept"] = AcceptHeaders.StableVersionJson;
             }
 
             if (request.Method == HttpMethod.Get || request.Body == null) return;
@@ -43,7 +41,7 @@ namespace Octokit.Internal
 
         public IApiResponse<T> DeserializeResponse<T>(IResponse response)
         {
-            Ensure.ArgumentNotNull(response, "response");
+            Ensure.ArgumentNotNull(response, nameof(response));
 
             if (response.ContentType != null && response.ContentType.Equals("application/json", StringComparison.Ordinal))
             {
@@ -56,7 +54,7 @@ namespace Octokit.Internal
                     var responseIsObject = body.StartsWith("{", StringComparison.Ordinal);
 
                     // If we're expecting an array, but we get a single object, just wrap it.
-                    // This supports an api that dynamically changes the return type based on the content.
+                    // This supports an API that dynamically changes the return type based on the content.
                     if (!typeIsDictionary && typeIsEnumerable && responseIsObject)
                     {
                         body = "[" + body + "]";

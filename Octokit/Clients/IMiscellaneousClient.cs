@@ -1,7 +1,5 @@
-﻿#if NET_45
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Collections.Generic;
-#endif
 using System.Diagnostics.CodeAnalysis;
 
 namespace Octokit
@@ -20,6 +18,7 @@ namespace Octokit
         /// <exception cref="ApiException">Thrown when a general API error occurs.</exception>
         /// <returns>An <see cref="IReadOnlyDictionary{TKey,TValue}"/> of emoji and their URI.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        [ExcludeFromPaginationApiOptionsConventionTest("Pagination not supported by GitHub API (tested 29/08/2017)")]
         Task<IReadOnlyList<Emoji>> GetAllEmojis();
 
         /// <summary>
@@ -43,6 +42,7 @@ namespace Octokit
         /// </summary>
         /// <returns>A list of template names</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        [ExcludeFromPaginationApiOptionsConventionTest("Pagination not supported by GitHub API (tested 29/08/2017)")]
         Task<IReadOnlyList<string>> GetAllGitIgnoreTemplates();
 
         /// <summary>
@@ -56,15 +56,22 @@ namespace Octokit
         /// Returns a list of the licenses shown in the license picker on GitHub.com. This is not a comprehensive
         /// list of all possible OSS licenses.
         /// </summary>
-        /// <remarks>This is a PREVIEW API! Use it at your own risk.</remarks>
         /// <returns>A list of licenses available on the site</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         Task<IReadOnlyList<LicenseMetadata>> GetAllLicenses();
 
         /// <summary>
-        /// Retrieves a license based on the licence key such as "mit"
+        /// Returns a list of the licenses shown in the license picker on GitHub.com. This is not a comprehensive
+        /// list of all possible OSS licenses.
         /// </summary>
-        /// <param name="key"></param>
+        /// <param name="options">Options for changing the API response</param>
+        /// <returns>A list of licenses available on the site</returns>
+        Task<IReadOnlyList<LicenseMetadata>> GetAllLicenses(ApiOptions options);
+
+        /// <summary>
+        /// Retrieves a license based on the license key such as "MIT"
+        /// </summary>
+        /// <param name="key">The license identifier to look for</param>
         /// <returns>A <see cref="License" /> that includes the license key, text, and attributes of the license.</returns>
         Task<License> GetLicense(string key);
 

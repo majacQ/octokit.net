@@ -1,18 +1,18 @@
 #!/bin/bash
-if test "$OS" = "Windows_NT"
-then
-  # use .Net
-
-"./tools/nuget/nuget.exe" "install" "xunit.runner.console" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "2.0.0"
-"./tools/nuget/nuget.exe" "install" "FAKE.Core" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "4.4.2"
-"./tools/nuget/nuget.exe" "install" "SourceLink.Fake" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "1.1.0"
-packages/FAKE/tools/FAKE.exe $@ --fsiargs -d:MONO build.fsx 
-else
-  # use mono
-mono "./tools/nuget/NuGet.exe" "install" "xunit.runner.console" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "2.0.0"
-mono "./tools/nuget/NuGet.exe" "install" "FAKE.Core" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "4.4.2"
-mono "./tools/nuget/NuGet.exe" "install" "SourceLink.Fake" "-OutputDirectory" "tools" "-ExcludeVersion" "-version" "1.1.0"
-mono "./tools/nuget/NuGet.exe" "install" "System.Net.Http" "-OutputDirectory" "tools" 
-mono "./tools/nuget/NuGet.exe" "install" "Microsoft.Net.Http" "-OutputDirectory" "tools" 
-mono ./tools/FAKE.Core/tools/FAKE.exe $@ --fsiargs -d:MONO build.fsx 
+if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+  # This is due to: https://github.com/NuGet/Home/issues/2163#issue-135917905
+  echo "current ulimit is: `ulimit -n`..."
+  ulimit -n 1024
+  echo "new limit: `ulimit -n`"
 fi
+
+echo "Restoring global tools"
+dotnet tool restore
+
+cd build
+echo "Preparing Cake.Frosting build runner..."
+dotnet restore
+
+echo "Executing Cake.Frosting build runner..."
+echo  "dotnet run -- $@"
+dotnet run -- "$@"

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace Octokit
@@ -25,7 +26,10 @@ namespace Octokit
         /// <remarks>
         /// See the <a href="http://developer.github.com/v3/users/keys/">Keys API documentation</a> for more information.
         ///</remarks>
-        IUserKeysClient Keys { get; }
+        IUserKeysClient GitSshKey { get; }
+
+        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Gpg")]
+        IUserGpgKeysClient GpgKey { get; }
 
         /// <summary>
         /// Returns the user specified by the login.
@@ -57,5 +61,13 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/">Followers API documentation</a> for more information.
         ///</remarks>
         IFollowersClient Followers { get; }
+
+        /// <summary>
+        /// A client for GitHub's User Administration API
+        /// </summary>
+        /// <remarks>
+        /// See the <a href="https://developer.github.com/v3/users/administration/">User Administrator API documentation</a> for more information.
+        ///</remarks>
+        IUserAdministrationClient Administration { get; }
     }
 }

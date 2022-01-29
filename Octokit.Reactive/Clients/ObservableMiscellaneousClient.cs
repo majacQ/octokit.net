@@ -9,11 +9,11 @@ namespace Octokit.Reactive
     {
         readonly IMiscellaneousClient _client;
 
-        public ObservableMiscellaneousClient(IMiscellaneousClient client)
+        public ObservableMiscellaneousClient(IGitHubClient client)
         {
-            Ensure.ArgumentNotNull(client, "client");
+            Ensure.ArgumentNotNull(client, nameof(client));
 
-            _client = client;
+            _client = client.Miscellaneous;
         }
 
         /// <summary>
@@ -70,15 +70,25 @@ namespace Octokit.Reactive
         /// Returns a list of the licenses shown in the license picker on GitHub.com. This is not a comprehensive
         /// list of all possible OSS licenses.
         /// </summary>
-        /// <remarks>This is a PREVIEW API! Use it at your own risk.</remarks>
         /// <returns>A list of licenses available on the site</returns>
         public IObservable<LicenseMetadata> GetAllLicenses()
         {
-            return _client.GetAllLicenses().ToObservable().SelectMany(l => l);
+            return GetAllLicenses(ApiOptions.None);
         }
 
         /// <summary>
-        /// Retrieves a license based on the licence key such as "mit"
+        /// Returns a list of the licenses shown in the license picker on GitHub.com. This is not a comprehensive
+        /// list of all possible OSS licenses.
+        /// </summary>
+        /// <param name="options">Options for changing the API response</param>
+        /// <returns>A list of licenses available on the site</returns>
+        public IObservable<LicenseMetadata> GetAllLicenses(ApiOptions options)
+        {
+            return _client.GetAllLicenses(options).ToObservable().SelectMany(l => l);
+        }
+
+        /// <summary>
+        /// Retrieves a license based on the license key such as "MIT"
         /// </summary>
         /// <param name="key"></param>
         /// <returns>A <see cref="License" /> that includes the license key, text, and attributes of the license.</returns>

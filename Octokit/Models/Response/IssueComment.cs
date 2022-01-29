@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Globalization;
+using Octokit.Internal;
 
 namespace Octokit
 {
@@ -9,15 +10,18 @@ namespace Octokit
     {
         public IssueComment() { }
 
-        public IssueComment(int id, Uri url, Uri htmlUrl, string body, DateTimeOffset createdAt, DateTimeOffset? updatedAt, User user)
+        public IssueComment(int id, string nodeId, string url, string htmlUrl, string body, DateTimeOffset createdAt, DateTimeOffset? updatedAt, User user, ReactionSummary reactions, AuthorAssociation authorAssociation)
         {
             Id = id;
+            NodeId = nodeId;
             Url = url;
             HtmlUrl = htmlUrl;
             Body = body;
             CreatedAt = createdAt;
             UpdatedAt = updatedAt;
             User = user;
+            Reactions = reactions;
+            AuthorAssociation = authorAssociation;
         }
 
         /// <summary>
@@ -26,14 +30,19 @@ namespace Octokit
         public int Id { get; protected set; }
 
         /// <summary>
+        /// GraphQL Node Id
+        /// </summary>
+        public string NodeId { get; protected set; }
+
+        /// <summary>
         /// The URL for this issue comment.
         /// </summary>
-        public Uri Url { get; protected set; }
+        public string Url { get; protected set; }
 
         /// <summary>
         /// The html URL for this issue comment.
         /// </summary>
-        public Uri HtmlUrl { get; protected set; }
+        public string HtmlUrl { get; protected set; }
 
         /// <summary>
         /// Details about the issue comment.
@@ -55,9 +64,34 @@ namespace Octokit
         /// </summary>
         public User User { get; protected set; }
 
+        /// <summary>
+        /// The comment author association with repository.
+        /// </summary>
+        public StringEnum<AuthorAssociation> AuthorAssociation { get; protected set; }
+
+        /// <summary>
+        /// The reaction summary for this comment.
+        /// </summary>
+        public ReactionSummary Reactions { get; protected set; }
+
         internal string DebuggerDisplay
         {
             get { return string.Format(CultureInfo.InvariantCulture, "Id: {0} CreatedAt: {1}", Id, CreatedAt); }
         }
+    }
+
+    public enum IssueCommentSort
+    {
+        /// <summary>
+        /// Sort by create date (default)
+        /// </summary>
+        [Parameter(Value = "created")]
+        Created,
+
+        /// <summary>
+        /// Sort by the date of the last update
+        /// </summary>
+        [Parameter(Value = "updated")]
+        Updated
     }
 }

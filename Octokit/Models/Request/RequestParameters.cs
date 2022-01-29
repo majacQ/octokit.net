@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Octokit.Internal;
-#if !PORTABLE
-using System.Collections.Concurrent;
-#endif
 
 namespace Octokit
 {
@@ -16,13 +14,9 @@ namespace Octokit
     /// </summary>
     public abstract class RequestParameters
     {
-#if PORTABLE
-        static readonly ConcurrentCache<Type, List<PropertyParameter>> _propertiesMap =
-            new ConcurrentCache<Type, List<PropertyParameter>>();
-#else
         static readonly ConcurrentDictionary<Type, List<PropertyParameter>> _propertiesMap =
             new ConcurrentDictionary<Type, List<PropertyParameter>>();
-#endif
+
         /// <summary>
         /// Converts the derived object into a dictionary that can be used to supply query string parameters.
         /// </summary>
@@ -49,6 +43,9 @@ namespace Octokit
             Justification = "GitHub API depends on lower case strings")]
         static Func<PropertyInfo, object, string> GetValueFunc(Type propertyType)
         {
+            // get underlying type if nullable
+            propertyType = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
+
             if (typeof(IEnumerable<string>).IsAssignableFrom(propertyType))
             {
                 return (prop, value) =>
@@ -98,6 +95,7 @@ namespace Octokit
         static string GetParameterAttributeValueForEnumName(Type enumType, string name)
         {
             var member = enumType.GetMember(name).FirstOrDefault();
+
             if (member == null) return null;
             var attribute = member.GetCustomAttributes(typeof(ParameterAttribute), false)
                 .Cast<ParameterAttribute>()

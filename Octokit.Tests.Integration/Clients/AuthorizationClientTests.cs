@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Xunit;
 
 namespace Octokit.Tests.Integration.Clients
@@ -13,7 +12,7 @@ namespace Octokit.Tests.Integration.Clients
             var note = Helper.MakeNameWithTimestamp("Testing authentication");
             var newAuthorization = new NewAuthorization(
                 note,
-                new string[] { "user" });
+                new[] { "user" });
 
             var created = await github.Authorization.Create(newAuthorization);
 
@@ -28,16 +27,49 @@ namespace Octokit.Tests.Integration.Clients
         }
 
         [IntegrationTest]
+        public async Task CanGetAuthorization()
+        {
+            var github = Helper.GetBasicAuthClient();
+
+            var authorizations = await github.Authorization.GetAll();
+            Assert.NotEmpty(authorizations);
+        }
+
+        [IntegrationTest]
+        public async Task CanGetAuthorizationWithApiOptions()
+        {
+            var github = Helper.GetBasicAuthClient();
+
+            var authorizations = await github.Authorization.GetAll(ApiOptions.None);
+            Assert.NotEmpty(authorizations);
+        }
+
+        [IntegrationTest]
+        public async Task ReturnsNotEmptyAuthorizationsWithoutStart()
+        {
+            var github = Helper.GetBasicAuthClient();
+
+            var options = new ApiOptions
+            {
+                PageSize = 5,
+                PageCount = 1
+            };
+
+            var authorizations = await github.Authorization.GetAll(options);
+            Assert.NotEmpty(authorizations);
+        }
+
+        [IntegrationTest]
         public async Task CannotCreatePersonalTokenWhenUsingOauthTokenCredentials()
         {
             var github = Helper.GetAuthenticatedClient();
             var note = Helper.MakeNameWithTimestamp("Testing authentication");
             var newAuthorization = new NewAuthorization(
                 note,
-                new string[] { "user" });
+                new[] { "user" });
 
-            var error = Assert.ThrowsAsync<ForbiddenException>(() => github.Authorization.Create(newAuthorization));
-            Assert.True(error.Result.Message.Contains("username and password Basic Auth"));
+            var error = await Assert.ThrowsAsync<ForbiddenException>(() => github.Authorization.Create(newAuthorization));
+            Assert.Contains("username and password Basic Auth", error.Message);
         }
 
         [BasicAuthenticationTest(Skip = "See https://github.com/octokit/octokit.net/issues/1000 for issue to investigate this further")]
@@ -152,7 +184,7 @@ namespace Octokit.Tests.Integration.Clients
             Assert.Equal(created.Token, applicationAuthorization.Token);
 
             await github.Authorization.Delete(created.Id);
-            Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
+            await Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
         }
 
         [BasicAuthenticationTest]
@@ -178,7 +210,7 @@ namespace Octokit.Tests.Integration.Clients
             Assert.NotEqual(created.Token, applicationAuthorization.Token);
 
             await github.Authorization.Delete(created.Id);
-            Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
+            await Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
         }
 
         [BasicAuthenticationTest]
@@ -200,45 +232,8 @@ namespace Octokit.Tests.Integration.Clients
             var applicationClient = Helper.GetAuthenticatedApplicationClient();
             await applicationClient.Authorization.RevokeApplicationAuthentication(Helper.ClientId, created.Token);
 
-            Assert.ThrowsAsync<NotFoundException>(() => applicationClient.Authorization.CheckApplicationAuthentication(Helper.ClientId, created.Token));
-            Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
-        }
-
-        [BasicAuthenticationTest]
-        public async Task CanRevokeAllApplicationAuthentications()
-        {
-            var github = Helper.GetBasicAuthClient();
-
-            var fingerprint = Helper.MakeNameWithTimestamp("authorization-testing");
-            var note = Helper.MakeNameWithTimestamp("Testing authentication");
-            var token1 = await github.Authorization.GetOrCreateApplicationAuthentication(
-                Helper.ClientId,
-                Helper.ClientSecret,
-                new NewAuthorization(
-                    note,
-                    new[] { "user" },
-                    fingerprint));
-
-            fingerprint = Helper.MakeNameWithTimestamp("authorization-testing-2");
-            note = Helper.MakeNameWithTimestamp("Testing authentication 2");
-            var token2 = await github.Authorization.GetOrCreateApplicationAuthentication(
-                Helper.ClientId,
-                Helper.ClientSecret,
-                new NewAuthorization(
-                    note,
-                    new[] { "user" },
-                    fingerprint));
-
-            var applicationClient = Helper.GetAuthenticatedApplicationClient();
-            await applicationClient.Authorization.RevokeAllApplicationAuthentications(Helper.ClientId);
-
-            Assert.ThrowsAsync<NotFoundException>(async () =>
-                await applicationClient.Authorization.CheckApplicationAuthentication(Helper.ClientId, token1.Token));
-            Assert.ThrowsAsync<NotFoundException>(async () =>
-                await applicationClient.Authorization.CheckApplicationAuthentication(Helper.ClientId, token2.Token));
-
-            Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(token1.Id));
-            Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(token2.Id));
+            await Assert.ThrowsAsync<NotFoundException>(() => applicationClient.Authorization.CheckApplicationAuthentication(Helper.ClientId, created.Token));
+            await Assert.ThrowsAsync<NotFoundException>(() => github.Authorization.Get(created.Id));
         }
     }
 }

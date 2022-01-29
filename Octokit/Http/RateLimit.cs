@@ -3,18 +3,21 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
+#if !NO_SERIALIZABLE
 using System.Runtime.Serialization;
-using Octokit.Helpers;
+#endif
+using System.Security;
 using Octokit.Internal;
 
 namespace Octokit
 {
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
     [Serializable]
 #endif
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class RateLimit
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
         : ISerializable
 #endif
     {
@@ -22,22 +25,22 @@ namespace Octokit
 
         public RateLimit(IDictionary<string, string> responseHeaders)
         {
-            Ensure.ArgumentNotNull(responseHeaders, "responseHeaders");
+            Ensure.ArgumentNotNull(responseHeaders, nameof(responseHeaders));
 
             Limit = (int)GetHeaderValueAsInt32Safe(responseHeaders, "X-RateLimit-Limit");
             Remaining = (int)GetHeaderValueAsInt32Safe(responseHeaders, "X-RateLimit-Remaining");
             ResetAsUtcEpochSeconds = GetHeaderValueAsInt32Safe(responseHeaders, "X-RateLimit-Reset");
         }
 
-        public RateLimit(int limit, int remaining, long reset)
+        public RateLimit(int limit, int remaining, long resetAsUtcEpochSeconds)
         {
-            Ensure.ArgumentNotNull(limit, "limit");
-            Ensure.ArgumentNotNull(remaining, "remaining");
-            Ensure.ArgumentNotNull(reset, "reset");
+            Ensure.ArgumentNotNull(limit, nameof(limit));
+            Ensure.ArgumentNotNull(remaining, nameof(remaining));
+            Ensure.ArgumentNotNull(resetAsUtcEpochSeconds, nameof(resetAsUtcEpochSeconds));
 
             Limit = limit;
             Remaining = remaining;
-            ResetAsUtcEpochSeconds = reset;
+            ResetAsUtcEpochSeconds = resetAsUtcEpochSeconds;
         }
 
         /// <summary>
@@ -54,7 +57,7 @@ namespace Octokit
         /// The date and time at which the current rate limit window resets
         /// </summary>
         [Parameter(Key = "ignoreThisField")]
-        public DateTimeOffset Reset { get { return ResetAsUtcEpochSeconds.FromUnixTime(); } }
+        public DateTimeOffset Reset => DateTimeOffset.FromUnixTimeSeconds(ResetAsUtcEpochSeconds);
 
         /// <summary>
         /// The date and time at which the current rate limit window resets - in UTC epoch seconds
@@ -63,28 +66,50 @@ namespace Octokit
         [Parameter(Key = "reset")]
         public long ResetAsUtcEpochSeconds { get; private set; }
 
+        static KeyValuePair<string, string> LookupHeader(IDictionary<string, string> headers, string key)
+        {
+            return headers.FirstOrDefault(h => string.Equals(h.Key, key, StringComparison.OrdinalIgnoreCase));
+        }
+
+        static bool Exists(KeyValuePair<string, string> kvp)
+        {
+            return !kvp.Equals(default(KeyValuePair<string, string>));
+        }
+
         static long GetHeaderValueAsInt32Safe(IDictionary<string, string> responseHeaders, string key)
         {
-            string value;
             long result;
-            return !responseHeaders.TryGetValue(key, out value) || value == null || !long.TryParse(value, out result)
+
+            var foundKey = LookupHeader(responseHeaders, key);
+            if (!Exists(foundKey))
+            {
+                return 0;
+            }
+
+            if (string.IsNullOrWhiteSpace(foundKey.Value))
+            {
+                return 0;
+            }
+
+            return !long.TryParse(foundKey.Value, out result)
                 ? 0
                 : result;
         }
 
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
         protected RateLimit(SerializationInfo info, StreamingContext context)
         {
-            Ensure.ArgumentNotNull(info, "info");
+            Ensure.ArgumentNotNull(info, nameof(info));
 
             Limit = info.GetInt32("Limit");
             Remaining = info.GetInt32("Remaining");
             ResetAsUtcEpochSeconds = info.GetInt64("ResetAsUtcEpochSeconds");
         }
 
+        [SecurityCritical]
         public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            Ensure.ArgumentNotNull(info, "info");
+            Ensure.ArgumentNotNull(info, nameof(info));
 
             info.AddValue("Limit", Limit);
             info.AddValue("Remaining", Remaining);

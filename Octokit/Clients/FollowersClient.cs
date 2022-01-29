@@ -27,9 +27,26 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#list-followers-of-a-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that follow the authenticated user.</returns>
+        [ManualRoute("GET", "/user/followers")]
         public Task<IReadOnlyList<User>> GetAllForCurrent()
         {
-            return ApiConnection.GetAll<User>(ApiUrls.Followers());
+            return GetAllForCurrent(ApiOptions.None);
+        }
+
+        /// <summary>
+        /// List the authenticated user’s followers
+        /// </summary>
+        /// <param name="options">Options for changing the API response</param>
+        /// <remarks>
+        /// See the <a href="http://developer.github.com/v3/users/followers/#list-followers-of-a-user">API documentation</a> for more information.
+        /// </remarks>
+        /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that follow the authenticated user.</returns>
+        [ManualRoute("GET", "/user/followers")]
+        public Task<IReadOnlyList<User>> GetAllForCurrent(ApiOptions options)
+        {
+            Ensure.ArgumentNotNull(options, nameof(options));
+
+            return ApiConnection.GetAll<User>(ApiUrls.Followers(), options);
         }
 
         /// <summary>
@@ -40,11 +57,30 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#list-followers-of-a-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that follow the passed user.</returns>
+        [ManualRoute("GET", "/users/{username}/followers")]
         public Task<IReadOnlyList<User>> GetAll(string login)
         {
-            Ensure.ArgumentNotNullOrEmptyString(login, "login");
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
 
-            return ApiConnection.GetAll<User>(ApiUrls.Followers(login));
+            return GetAll(login, ApiOptions.None);
+        }
+
+        /// <summary>
+        /// List a user’s followers
+        /// </summary>
+        /// <param name="login">The login name for the user</param>
+        /// <param name="options">Options for changing the API response</param>
+        /// <remarks>
+        /// See the <a href="http://developer.github.com/v3/users/followers/#list-followers-of-a-user">API documentation</a> for more information.
+        /// </remarks>
+        /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that follow the passed user.</returns>
+        [ManualRoute("GET", "/users/{username}/followers")]
+        public Task<IReadOnlyList<User>> GetAll(string login, ApiOptions options)
+        {
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
+            Ensure.ArgumentNotNull(options, nameof(options));
+
+            return ApiConnection.GetAll<User>(ApiUrls.Followers(login), options);
         }
 
         /// <summary>
@@ -54,9 +90,26 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#list-users-followed-by-another-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that the authenticated user follows.</returns>
+        [ManualRoute("GET", "/user/following")]
         public Task<IReadOnlyList<User>> GetAllFollowingForCurrent()
         {
-            return ApiConnection.GetAll<User>(ApiUrls.Following());
+            return GetAllFollowingForCurrent(ApiOptions.None);
+        }
+
+        /// <summary>
+        /// List who the authenticated user is following
+        /// </summary>
+        /// <param name="options">Options for changing the API response</param>
+        /// <remarks>
+        /// See the <a href="http://developer.github.com/v3/users/followers/#list-users-followed-by-another-user">API documentation</a> for more information.
+        /// </remarks>
+        /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that the authenticated user follows.</returns>
+        [ManualRoute("GET", "/user/following")]
+        public Task<IReadOnlyList<User>> GetAllFollowingForCurrent(ApiOptions options)
+        {
+            Ensure.ArgumentNotNull(options, nameof(options));
+
+            return ApiConnection.GetAll<User>(ApiUrls.Following(), options);
         }
 
         /// <summary>
@@ -67,11 +120,30 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#list-users-followed-by-another-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that the passed user follows.</returns>
+        [ManualRoute("GET", "/users/{username}/following")]
         public Task<IReadOnlyList<User>> GetAllFollowing(string login)
         {
-            Ensure.ArgumentNotNullOrEmptyString(login, "login");
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
 
-            return ApiConnection.GetAll<User>(ApiUrls.Following(login));
+            return GetAllFollowing(login, ApiOptions.None);
+        }
+
+        /// <summary>
+        /// List who a user is following
+        /// </summary>
+        /// <param name="login">The login name of the user</param>
+        /// <param name="options">Options for changing the API response</param>
+        /// <remarks>
+        /// See the <a href="http://developer.github.com/v3/users/followers/#list-users-followed-by-another-user">API documentation</a> for more information.
+        /// </remarks>
+        /// <returns>A <see cref="IReadOnlyList{User}"/> of <see cref="User"/>s that the passed user follows.</returns>
+        [ManualRoute("GET", "/users/{username}/following")]
+        public Task<IReadOnlyList<User>> GetAllFollowing(string login, ApiOptions options)
+        {
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
+            Ensure.ArgumentNotNull(options, nameof(options));
+
+            return ApiConnection.GetAll<User>(ApiUrls.Following(login), options);
         }
 
         /// <summary>
@@ -82,14 +154,14 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#check-if-you-are-following-a-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <c>bool</c> representing the success of the operation.</returns>
+        [ManualRoute("GET", "/user/following/{username}")]
         public async Task<bool> IsFollowingForCurrent(string following)
         {
-            Ensure.ArgumentNotNullOrEmptyString(following, "following");
+            Ensure.ArgumentNotNullOrEmptyString(following, nameof(following));
 
             try
             {
-                var response = await Connection.Get<object>(ApiUrls.IsFollowing(following), null, null)
-                                                .ConfigureAwait(false);
+                var response = await Connection.Get<object>(ApiUrls.IsFollowing(following), null, null).ConfigureAwait(false);
                 return response.HttpResponse.IsTrue();
             }
             catch (NotFoundException)
@@ -107,15 +179,15 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#check-if-one-user-follows-another">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <c>bool</c> representing the success of the operation.</returns>
+        [ManualRoute("GET", "/users/{username}/following/{target_user}")]
         public async Task<bool> IsFollowing(string login, string following)
         {
-            Ensure.ArgumentNotNullOrEmptyString(login, "login");
-            Ensure.ArgumentNotNullOrEmptyString(following, "following");
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
+            Ensure.ArgumentNotNullOrEmptyString(following, nameof(following));
 
             try
             {
-                var response = await Connection.Get<object>(ApiUrls.IsFollowing(login, following), null, null)
-                                                .ConfigureAwait(false);
+                var response = await Connection.Get<object>(ApiUrls.IsFollowing(login, following), null, null).ConfigureAwait(false);
                 return response.HttpResponse.IsTrue();
             }
             catch (NotFoundException)
@@ -132,15 +204,15 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#follow-a-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns>A <c>bool</c> representing the success of the operation.</returns>
+        [ManualRoute("PUT", "/user/following/{username}")]
         public async Task<bool> Follow(string login)
         {
-            Ensure.ArgumentNotNullOrEmptyString(login, "login");
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
 
             try
             {
                 var requestData = new { };
-                var response = await Connection.Put<object>(ApiUrls.IsFollowing(login), requestData)
-                                                .ConfigureAwait(false);
+                var response = await Connection.Put<object>(ApiUrls.IsFollowing(login), requestData).ConfigureAwait(false);
                 if (response.HttpResponse.StatusCode != HttpStatusCode.NoContent)
                 {
                     throw new ApiException("Invalid Status Code returned. Expected a 204", response.HttpResponse.StatusCode);
@@ -161,9 +233,10 @@ namespace Octokit
         /// See the <a href="http://developer.github.com/v3/users/followers/#unfollow-a-user">API documentation</a> for more information.
         /// </remarks>
         /// <returns></returns>
+        [ManualRoute("DELETE", "/user/following/{username}")]
         public Task Unfollow(string login)
         {
-            Ensure.ArgumentNotNullOrEmptyString(login, "login");
+            Ensure.ArgumentNotNullOrEmptyString(login, nameof(login));
 
             return ApiConnection.Delete(ApiUrls.IsFollowing(login));
         }

@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -61,7 +60,7 @@ namespace Octokit
         /// <summary>
         /// JSON payload with extra information about the deployment.
         /// </summary>
-        public string Payload { get; set; }
+        public Dictionary<string, string> Payload { get; set; }
 
         /// <summary>
         /// Optional name for the target deployment environment (e.g., production, staging, qa). Default: "production"
@@ -76,6 +75,18 @@ namespace Octokit
         /// </summary>
         public string Description { get; set; }
 
+        /// <summary>
+        /// Indicates if the environment is specific to a deployment and will no longer exist at some point in the future.
+        /// (DEFAULT if not specified: False)
+        /// </summary>
+        public bool? TransientEnvironment { get; set; }
+
+        /// <summary>
+        /// Indicates if the environment is one with which end users directly interact.
+        /// (DEFAULT if not specified: True when environment is "production" and False otherwise)
+        /// </summary>
+        public bool? ProductionEnvironment { get; set; }
+
         internal string DebuggerDisplay
         {
             get
@@ -86,13 +97,14 @@ namespace Octokit
     }
 
     /// <summary>
-    /// The types of deployments tasks that are availabel.
+    /// The types of deployments tasks that are available.
     /// </summary>
     public enum DeployTask
     {
         /// <summary>
         /// Deploy everything (default)
         /// </summary>
+        [Parameter(Value = "deploy")]
         Deploy,
 
         /// <summary>

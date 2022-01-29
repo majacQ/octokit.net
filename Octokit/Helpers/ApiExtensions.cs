@@ -2,9 +2,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-#if NET_45
 using System.Collections.Generic;
-#endif
 
 namespace Octokit
 {
@@ -14,35 +12,19 @@ namespace Octokit
     public static class ApiExtensions
     {
         /// <summary>
-        /// Gets the API resource at the specified URI.
-        /// </summary>
-        /// <typeparam name="T">Type of the API resource to get.</typeparam>
-        /// <param name="connection">The connection to use</param>
-        /// <param name="uri">URI of the API resource to get</param>
-        /// <returns>The API resource.</returns>
-        /// <exception cref="ApiException">Thrown when an API error occurs.</exception>
-        public static Task<T> Get<T>(this IApiConnection connection, Uri uri)
-        {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
-
-            return connection.Get<T>(uri, null);
-        }
-
-        /// <summary>
         /// Gets all API resources in the list at the specified URI.
         /// </summary>
         /// <typeparam name="T">Type of the API resource in the list.</typeparam>
         /// <param name="connection">The connection to use</param>
         /// <param name="uri">URI of the API resource to get</param>
-        /// <returns><see cref="IReadOnlyList{T}"/> of the The API resources in the list.</returns>
+        /// <returns><see cref="IReadOnlyList{T}"/> of the API resources in the list.</returns>
         /// <exception cref="ApiException">Thrown when an API error occurs.</exception>
         public static Task<IReadOnlyList<T>> GetAll<T>(this IApiConnection connection, Uri uri)
         {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
+            Ensure.ArgumentNotNull(connection, nameof(connection));
+            Ensure.ArgumentNotNull(uri, nameof(uri));
 
-            return connection.GetAll<T>(uri, null);
+            return connection.GetAll<T>(uri, ApiOptions.None);
         }
 
         /// <summary>
@@ -54,8 +36,8 @@ namespace Octokit
         /// <exception cref="ApiException">Thrown when an API error occurs.</exception>
         public static Task<string> GetHtml(this IApiConnection connection, Uri uri)
         {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
+            Ensure.ArgumentNotNull(connection, nameof(connection));
+            Ensure.ArgumentNotNull(uri, nameof(uri));
 
             return connection.GetHtml(uri, null);
         }
@@ -68,8 +50,8 @@ namespace Octokit
         /// <returns><seealso cref="IResponse"/> representing the received HTTP response</returns>
         public static Task<IApiResponse<string>> GetHtml(this IConnection connection, Uri uri)
         {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
+            Ensure.ArgumentNotNull(connection, nameof(connection));
+            Ensure.ArgumentNotNull(uri, nameof(uri));
 
             return connection.GetHtml(uri, null);
         }
@@ -84,19 +66,10 @@ namespace Octokit
         /// <exception cref="ApiException">Thrown when an API error occurs.</exception>
         public static Task<IApiResponse<T>> GetResponse<T>(this IConnection connection, Uri uri)
         {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
+            Ensure.ArgumentNotNull(connection, nameof(connection));
+            Ensure.ArgumentNotNull(uri, nameof(uri));
 
             return connection.Get<T>(uri, null, null);
-        }
-
-        [Obsolete("Octokit's HTTP library now follows redirects by default - this API will be removed in a future release")]
-        public static Task<IApiResponse<T>> GetRedirect<T>(this IConnection connection, Uri uri)
-        {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
-
-            return connection.Get<T>(uri, null, null, false);
         }
 
         /// <summary>
@@ -110,8 +83,8 @@ namespace Octokit
         /// <exception cref="ApiException">Thrown when an API error occurs.</exception>
         public static Task<IApiResponse<T>> GetResponse<T>(this IConnection connection, Uri uri, CancellationToken cancellationToken)
         {
-            Ensure.ArgumentNotNull(connection, "connection");
-            Ensure.ArgumentNotNull(uri, "uri");
+            Ensure.ArgumentNotNull(connection, nameof(connection));
+            Ensure.ArgumentNotNull(uri, nameof(uri));
 
             return connection.Get<T>(uri, null, null, cancellationToken);
         }
@@ -129,7 +102,7 @@ namespace Octokit
         /// <returns></returns>
         public static bool IsTrue(this IResponse response)
         {
-            Ensure.ArgumentNotNull(response, "response");
+            Ensure.ArgumentNotNull(response, nameof(response));
 
             if (response.StatusCode != HttpStatusCode.NotFound && response.StatusCode != HttpStatusCode.NoContent)
             {

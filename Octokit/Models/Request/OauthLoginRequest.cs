@@ -15,17 +15,17 @@ namespace Octokit
         /// <summary>
         /// Creates an instance of the OAuth login request with the required parameter.
         /// </summary>
-        /// <param name="clientId">The client ID you received from GitHub when you registered the application.</param>
+        /// <param name="clientId">The client Id you received from GitHub when you registered the application.</param>
         public OauthLoginRequest(string clientId)
         {
-            Ensure.ArgumentNotNullOrEmptyString(clientId, "clientId");
+            Ensure.ArgumentNotNullOrEmptyString(clientId, nameof(clientId));
 
             ClientId = clientId;
             Scopes = new Collection<string>();
         }
 
         /// <summary>
-        /// The client ID you received from GitHub when you registered the application.
+        /// The client Id you received from GitHub when you registered the application.
         /// </summary>
         [Parameter(Key = "client_id")]
         public string ClientId { get; private set; }
@@ -39,6 +39,12 @@ namespace Octokit
         /// </remarks>
         [Parameter(Key = "redirect_uri")]
         public Uri RedirectUri { get; set; }
+
+        /// <summary>
+        /// Suggests a specific account to use for signing in and authorizing the app.
+        /// </summary>
+        [Parameter(Key = "login")]
+        public string Login { get; set; }
 
         /// <summary>
         /// A set of scopes to request. If not provided, scope defaults to an empty list of scopes for users that don’t
@@ -59,6 +65,13 @@ namespace Octokit
         /// </summary>
         [Parameter(Key = "state")]
         public string State { get; set; }
+
+        /// <summary>
+        /// Whether or not unauthenticated users will be offered an option to sign up for GitHub during the OAuth flow.
+        /// The default is <c>true</c>. Use <c>false</c> in the case that a policy prohibits signups.
+        /// </summary>
+        [Parameter(Key = "allow_signup")]
+        public bool? AllowSignup { get; set; }
 
         internal string DebuggerDisplay
         {

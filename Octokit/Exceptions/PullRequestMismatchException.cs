@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+#if !NO_SERIALIZABLE
 using System.Runtime.Serialization;
+#endif
 
 namespace Octokit
 {
@@ -10,7 +12,7 @@ namespace Octokit
     /// Represents an error that occurs when the specified SHA
     /// doesn't match the current pull request's HEAD
     /// </summary>
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
     [Serializable]
 #endif
     [SuppressMessage("Microsoft.Design", "CA1032:ImplementStandardExceptionConstructors",
@@ -18,7 +20,7 @@ namespace Octokit
     public class PullRequestMismatchException : ApiException
     {
         /// <summary>
-        /// Constructs an instace of <see cref="Octokit.PullRequestMismatchException"/>.
+        /// Constructs an instance of <see cref="Octokit.PullRequestMismatchException"/>.
         /// </summary>
         /// <param name="response"></param>
         public PullRequestMismatchException(IResponse response) : this(response, null)
@@ -43,7 +45,7 @@ namespace Octokit
             get { return ApiErrorMessageSafe ?? "Head branch was modified. Review and try the merge again."; }
         }
 
-#if !NETFX_CORE
+#if !NO_SERIALIZABLE
         /// <summary>
         /// Constructs an instance of <see cref="Octokit.PullRequestNotMergeableException"/>.
         /// </summary>

@@ -9,21 +9,21 @@ If you want to view all assigned, open issues against repositories you belong to
 (either you own them, or you belong to a team or organization), use this
 method:
 
-```
+```csharp
 var issues = await client.Issue.GetAllForCurrent();
 ```
 
 If you want to skip organization repositories, you can instead use this
 rather verbose method:
 
-```
+```csharp
 var issues = await client.Issue.GetAllForOwnedAndMemberRepositories();
 ```
 
 If you know the specific repository, just invoke that:
 
-```
-var issuesForOctokit = await client.Issue.GetForRepository("octokit", "octokit.net");
+```csharp
+var issuesForOctokit = await client.Issue.GetAllForRepository("octokit", "octokit.net");
 ```
 
 ### Filtering
@@ -41,11 +41,11 @@ The simplest request is `IssueRequest` which has these options:
 
 For example, this is how you could find all issues updated in the past two weeks:
 
-```
+```csharp
 var recently = new IssueRequest
 {
     Filter = IssueFilter.All,
-    State = ItemState.All,
+    State = ItemStateFilter.All,
     Since = DateTimeOffset.Now.Subtract(TimeSpan.FromDays(14))
 };
 var issues = await client.Issue.GetAllForCurrent(recently);
@@ -60,23 +60,24 @@ var issues = await client.Issue.GetAllForCurrent(recently);
 
 For example, to find all issues which need to be prioritized:
 
-```
+```csharp
 var shouldPrioritize = new RepositoryIssueRequest
 {
     Assignee = "none",
     Milestone = "none",
     Filter = IssueFilter.All
 };
-var issues = await client.Issue.GetForRepository("octokit", "octokit.net", shouldPrioritize);
+var issues = await client.Issue.GetAllForRepository("octokit", "octokit.net", shouldPrioritize);
 ```
 
 ### Create
 
 At a minimum, you need to specify the title:
 
-```
+```csharp
+var client = new GitHubClient(....); // More on GitHubClient can be found in "Getting Started"
 var createIssue = new NewIssue("this thing doesn't work");
-var issue = await _issuesClient.Create("octokit", "octokit.net", createIssue);
+var issue = await client.Issue.Create("owner", "name", createIssue);
 ```
 
 `Create` returns a `Task<Issue>` which represents the created issue.
@@ -89,8 +90,8 @@ There's also a number of additional fields:
  - `Labels` - a collection of labels to assign to the issue
 
 Note that `Milestones` and `Labels` need to exist in the repository before
-creating the issue. Refer to the [Milestones](https://github.com/octokit/octokit.net/blob/master/docs/milestones.md)
-and [Labels](https://github.com/octokit/octokit.net/blob/master/docs/labels.md)
+creating the issue. Refer to the [Milestones](https://github.com/octokit/octokit.net/blob/main/docs/milestones.md)
+and [Labels](https://github.com/octokit/octokit.net/blob/main/docs/labels.md)
 sections for more details.
 
 ### Update
@@ -98,17 +99,17 @@ sections for more details.
 You can either hold the new issue in memory, or use the id to fetch the issue
 later:
 
-```
+```csharp
 var issue = await client.Issue.Get("octokit", "octokit.net", 405);
 ```
 
 With this issue, you can transform it into an `IssueUpdate` using the extension method:
 
-```
+```csharp
 var update = issue.ToUpdate();
 ```
 
-This creates an `IssueUpdate` which lets you specify the neccessary changes.
+This creates an `IssueUpdate` which lets you specify the necessary changes.
 Label changes probably requires some explanation:
 
  - by default, no labels are set in an `IssueUpdate` - this is to indicate

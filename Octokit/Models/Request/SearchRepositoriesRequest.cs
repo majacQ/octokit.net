@@ -83,7 +83,7 @@ namespace Octokit
         public Range Size { get; set; }
 
         /// <summary>
-        /// Searches repositories based on the language they’re written in.
+        /// Searches repositories based on the language theyâ€™re written in.
         /// https://help.github.com/articles/searching-repositories#languages
         /// </summary>
         public Language? Language { get; set; }
@@ -112,6 +112,27 @@ namespace Octokit
         /// </summary>
         public DateRange Updated { get; set; }
 
+        /// <summary>
+        /// Filters repositories based on license
+        /// https://help.github.com/articles/searching-repositories#search-by-license
+        /// </summary>
+        public RepoSearchLicense? License { get; set; }
+
+        /// <summary>
+        /// Filters whether archived repositories should be included (true) or not (false).
+        /// </summary>
+        public bool? Archived { get; set; }
+
+        /// <summary>
+        /// Filters on whether repositories are tagged with the given topic.
+        /// </summary>
+        public string Topic { get; set; }
+
+        /// <summary>
+        /// Filters on the number of topics that a repository is associated with.
+        /// </summary>
+        public Range Topics { get; set; }
+
         public override IReadOnlyList<string> MergedQualifiers()
         {
             var parameters = new List<string>();
@@ -133,7 +154,7 @@ namespace Octokit
 
             if (Fork != null)
             {
-                parameters.Add(string.Format(CultureInfo.InvariantCulture, "fork:{0}", Fork));
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "fork:{0}", Fork.ToParameter()));
             }
 
             if (Stars != null)
@@ -143,7 +164,7 @@ namespace Octokit
 
             if (Language != null)
             {
-                parameters.Add(string.Format(CultureInfo.InvariantCulture, "language:{0}", Language));
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "language:\"{0}\"", Language.ToParameter()));
             }
 
             if (User.IsNotBlank())
@@ -160,6 +181,26 @@ namespace Octokit
             {
                 parameters.Add(string.Format(CultureInfo.InvariantCulture, "pushed:{0}", Updated));
             }
+
+            if (Archived != null)
+            {
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "archived:{0}", Archived.ToString().ToLower()));
+            }
+
+            if (Topic != null)
+            {
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "topic:{0}", Topic.ToLower()));
+            }
+
+            if (Topics != null)
+            {
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "topics:{0}", Topics.ToString().ToLower()));
+            }
+            if (License != null)
+            {
+                parameters.Add(string.Format(CultureInfo.InvariantCulture, "license:{0}", License.ToParameter()));
+            }
+
             return parameters;
         }
 
@@ -179,13 +220,18 @@ namespace Octokit
     /// </summary>
     public enum InQualifier
     {
+        [Parameter(Value = "name")]
         Name,
+
+        [Parameter(Value = "description")]
         Description,
+
+        [Parameter(Value = "readme")]
         Readme
     }
 
     /// <summary>
-    /// Helper class in generating the range values for a qualifer e.g. In or Size qualifiers
+    /// Helper class in generating the range values for a qualifier e.g. In or Size qualifiers
     /// </summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class Range
@@ -282,27 +328,31 @@ namespace Octokit
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
     public class DateRange
     {
+        public const string DateTimePattern = "yyyy-MM-dd'T'HH:mm:sszzz";
+        public const string DatePattern = "yyyy-MM-dd";
+
         private readonly string query = string.Empty;
 
         /// <summary>
         /// Matches repositories with regards to the <param name="date"/>.
         /// We will use the <param name="op"/> to see what operator will be applied to the date qualifier
         /// </summary>
+        [Obsolete("This ctor does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public DateRange(DateTime date, SearchQualifierOperator op)
         {
             switch (op)
             {
                 case SearchQualifierOperator.GreaterThan:
-                    query = string.Format(CultureInfo.InvariantCulture, ">{0:yyyy-MM-dd}", date);
+                    query = date.ToString($">{DatePattern}", CultureInfo.InvariantCulture);
                     break;
                 case SearchQualifierOperator.LessThan:
-                    query = string.Format(CultureInfo.InvariantCulture, "<{0:yyyy-MM-dd}", date);
+                    query = date.ToString($"<{DatePattern}", CultureInfo.InvariantCulture);
                     break;
                 case SearchQualifierOperator.LessThanOrEqualTo:
-                    query = string.Format(CultureInfo.InvariantCulture, "<={0:yyyy-MM-dd}", date);
+                    query = date.ToString($"<={DatePattern}", CultureInfo.InvariantCulture);
                     break;
                 case SearchQualifierOperator.GreaterThanOrEqualTo:
-                    query = string.Format(CultureInfo.InvariantCulture, ">={0:yyyy-MM-dd}", date);
+                    query = date.ToString($">={DatePattern}", CultureInfo.InvariantCulture);
                     break;
             }
         }
@@ -310,9 +360,46 @@ namespace Octokit
         /// <summary>
         /// Matches repositories with regards to both the <param name="from"/> and <param name="to"/> dates.
         /// </summary>
+        [Obsolete("This ctor does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public DateRange(DateTime from, DateTime to)
         {
-            query = string.Format(CultureInfo.InvariantCulture, "{0:yyyy-MM-dd}..{1:yyyy-MM-dd}", from, to);
+            query = $"{from.ToString(DatePattern, CultureInfo.InvariantCulture)}..{to.ToString(DatePattern, CultureInfo.InvariantCulture)}";
+        }
+
+        /// <summary>
+        /// Matches repositories with regards to both the <param name="from"/> and <param name="to"/> date and time values.
+        /// </summary>
+        public DateRange(DateTimeOffset from, DateTimeOffset to)
+        {
+            query = EncodeOffset($"{from.ToString(DateTimePattern, CultureInfo.InvariantCulture)}..{to.ToString(DateTimePattern, CultureInfo.InvariantCulture)}");
+        }
+
+        /// <summary>
+        /// Matches repositories with regards to the <param name="dateTime"/>.
+        /// We will use the <param name="op"/> to see what operator will be applied to the date qualifier
+        /// </summary>
+        public DateRange(DateTimeOffset dateTime, SearchQualifierOperator op)
+        {
+            switch (op)
+            {
+                case SearchQualifierOperator.GreaterThan:
+                    query = EncodeOffset(dateTime.ToString($">{DateTimePattern}", CultureInfo.InvariantCulture));
+                    break;
+                case SearchQualifierOperator.LessThan:
+                    query = EncodeOffset(dateTime.ToString($"<{DateTimePattern}", CultureInfo.InvariantCulture));
+                    break;
+                case SearchQualifierOperator.LessThanOrEqualTo:
+                    query = EncodeOffset(dateTime.ToString($"<={DateTimePattern}", CultureInfo.InvariantCulture));
+                    break;
+                case SearchQualifierOperator.GreaterThanOrEqualTo:
+                    query = EncodeOffset(dateTime.ToString($">={DateTimePattern}", CultureInfo.InvariantCulture));
+                    break;
+            }
+        }
+
+        private string EncodeOffset(string dateTimeOffset)
+        {
+            return dateTimeOffset.Replace("+", "%2B");
         }
 
         internal string DebuggerDisplay
@@ -321,44 +408,48 @@ namespace Octokit
         }
 
         /// <summary>
-        /// helper method to create a LessThan Date Comparision
+        /// helper method to create a LessThan Date Comparison
         /// e.g. &lt; 2011
         /// </summary>
-        /// <param name="date">date to be used for comparision (times are ignored)</param>
+        /// <param name="date">date to be used for comparison (times are ignored)</param>
         /// <returns><see cref="DateRange"/></returns>
+        [Obsolete("This method does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public static DateRange LessThan(DateTime date)
         {
             return new DateRange(date, SearchQualifierOperator.LessThan);
         }
 
         /// <summary>
-        /// helper method to create a LessThanOrEqualTo Date Comparision
+        /// helper method to create a LessThanOrEqualTo Date Comparison
         /// e.g. &lt;= 2011
         /// </summary>
-        /// <param name="date">date to be used for comparision (times are ignored)</param>
+        /// <param name="date">date to be used for comparison (times are ignored)</param>
         /// <returns><see cref="DateRange"/></returns>
+        [Obsolete("This method does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public static DateRange LessThanOrEquals(DateTime date)
         {
             return new DateRange(date, SearchQualifierOperator.LessThanOrEqualTo);
         }
 
         /// <summary>
-        /// helper method to create a GreaterThan Date Comparision
+        /// helper method to create a GreaterThan Date Comparison
         /// e.g. > 2011
         /// </summary>
-        /// <param name="date">date to be used for comparision (times are ignored)</param>
+        /// <param name="date">date to be used for comparison (times are ignored)</param>
         /// <returns><see cref="DateRange"/></returns>
+        [Obsolete("This method does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public static DateRange GreaterThan(DateTime date)
         {
             return new DateRange(date, SearchQualifierOperator.GreaterThan);
         }
 
         /// <summary>
-        /// helper method to create a GreaterThanOrEqualTo Date Comparision
+        /// helper method to create a GreaterThanOrEqualTo Date Comparison
         /// e.g. >= 2011
         /// </summary>
-        /// <param name="date">date to be used for comparision (times are ignored)</param>
+        /// <param name="date">date to be used for comparison (times are ignored)</param>
         /// <returns><see cref="DateRange"/></returns>
+        [Obsolete("This method does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public static DateRange GreaterThanOrEquals(DateTime date)
         {
             return new DateRange(date, SearchQualifierOperator.GreaterThanOrEqualTo);
@@ -371,7 +462,64 @@ namespace Octokit
         /// <param name="from">earlier date of the two</param>
         /// <param name="to">latter date of the two</param>
         /// <returns><see cref="DateRange"/></returns>
+        [Obsolete("This method does not support the time component or timezone and will be removed in a future release. Please use the DateTimeOffset overload instead")]
         public static DateRange Between(DateTime from, DateTime to)
+        {
+            return new DateRange(from, to);
+        }
+
+        /// <summary>
+        /// helper method to create a LessThan DateTime Comparison
+        /// e.g. &lt; 2011
+        /// </summary>
+        /// <param name="dateTime">datetime to be used for comparison (times are ignored)</param>
+        /// <returns><see cref="DateRange"/></returns>
+        public static DateRange LessThan(DateTimeOffset dateTime)
+        {
+            return new DateRange(dateTime, SearchQualifierOperator.LessThan);
+        }
+
+        /// <summary>
+        /// helper method to create a LessThanOrEqualTo DateTime Comparison
+        /// e.g. &lt;= 2011
+        /// </summary>
+        /// <param name="dateTime">datetime to be used for comparison (times are ignored)</param>
+        /// <returns><see cref="DateRange"/></returns>
+        public static DateRange LessThanOrEquals(DateTimeOffset dateTime)
+        {
+            return new DateRange(dateTime, SearchQualifierOperator.LessThanOrEqualTo);
+        }
+
+        /// <summary>
+        /// helper method to create a GreaterThan DateTime Comparison
+        /// e.g. > 2011
+        /// </summary>
+        /// <param name="dateTime">datetime to be used for comparison (times are ignored)</param>
+        /// <returns><see cref="DateRange"/></returns>
+        public static DateRange GreaterThan(DateTimeOffset dateTime)
+        {
+            return new DateRange(dateTime, SearchQualifierOperator.GreaterThan);
+        }
+
+        /// <summary>
+        /// helper method to create a GreaterThanOrEqualTo DateTime Comparison
+        /// e.g. >= 2011
+        /// </summary>
+        /// <param name="dateTime">datetime to be used for comparison (times are ignored)</param>
+        /// <returns><see cref="DateRange"/></returns>
+        public static DateRange GreaterThanOrEquals(DateTimeOffset dateTime)
+        {
+            return new DateRange(dateTime, SearchQualifierOperator.GreaterThanOrEqualTo);
+        }
+
+        /// <summary>
+        /// helper method to create a bounded DateTime Comparison
+        /// e.g. 2015-08-01..2015-10-31
+        /// </summary>
+        /// <param name="from">earlier datetime of the two</param>
+        /// <param name="to">latter datetime of the two</param>
+        /// <returns><see cref="DateRange"/></returns>
+        public static DateRange Between(DateTimeOffset from, DateTimeOffset to)
         {
             return new DateRange(from, to);
         }
@@ -383,7 +531,7 @@ namespace Octokit
     }
 
     /// <summary>
-    /// lanuages that can be searched on in github
+    /// Languages that can be searched on in GitHub
     /// https://help.github.com/articles/searching-repositories#languages
     /// </summary>
     public enum Language
@@ -444,9 +592,9 @@ namespace Octokit
         ColdFusion,
         CommonLisp,
         Coq,
-        [Parameter(Value = "C++")]
+        [Parameter(Value = "cpp")]
         CPlusPlus,
-        [Parameter(Value = "C#")]
+        [Parameter(Value = "CSharp")]
         CSharp,
         Css,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Cpp")]
@@ -479,9 +627,9 @@ namespace Octokit
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Edn")]
         Edn,
         Eiffel,
-        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Elixer")]
-        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Elixer")]
-        Elixer,
+        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Elixir")]
+        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Elixir")]
+        Elixir,
         Elm,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Emacs")]
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Emacs")]
@@ -552,6 +700,8 @@ namespace Octokit
         JavaScript,
         Json,
         Julia,
+        [Parameter(Value = "Jupyter Notebook")]
+        JupyterNotebook,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Kotlin")]
         Kotlin,
         Lasso,
@@ -690,6 +840,8 @@ namespace Octokit
         [SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "SuperCollider")]
         [Parameter(Value = "SuperCollider")]
         SuperCollider,
+        [Parameter(Value = "Swift")]
+        Swift,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Tcl")]
         Tcl,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Tcsh")]
@@ -709,9 +861,9 @@ namespace Octokit
         [SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeScript")]
         [Parameter(Value = "TypeScript")]
         TypeScript,
-        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Paralel")]
-        [Parameter(Value = "Unified Paralel C")]
-        UnifiedParalelC,
+        [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Parallel")]
+        [Parameter(Value = "Unified Parallel C")]
+        UnifiedParallelC,
         Unknown,
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Vala")]
         Vala,
@@ -741,6 +893,98 @@ namespace Octokit
         [SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Yaml")]
         Yaml
 #pragma warning restore 1591
+    }
+
+    /// <summary>
+    /// Licenses than can be searched on GitHub
+    /// https://help.github.com/articles/searching-repositories#search-by-license
+    /// </summary>
+    public enum RepoSearchLicense
+    {
+        [Parameter(Value = "afl-3.0")]
+        AcademicFree_3_0,
+        [Parameter(Value = "apache-2.0")]
+        Apache_2_0,
+        [Parameter(Value = "artistic-2.0")]
+        Artistic_2_0,
+        [Parameter(Value = "bsl-1.0")]
+        BoostSoftware_1_0,
+        [Parameter(Value = "0bsd")]
+        BSD0Clause,
+        [Parameter(Value = "bsd-2-clause")]
+        BSD2Clause,
+        [Parameter(Value = "bsd-3-clause")]
+        BSD3Clause,
+        [Parameter(Value = "bsd-3-clause-clear")]
+        BSD3ClauseClear,
+        [Parameter(Value = "bsd-4-clause")]
+        BSD4Clause,
+        [Parameter(Value = "cc")]
+        CreativeCommons,
+        [Parameter(Value = "cc0-1.0")]
+        CreativeCommonsZero_1_0,
+        [Parameter(Value = "cc-by-4.0")]
+        CreativeCommonsAtrribution_4_0,
+        [Parameter(Value = "cc-by-sa-4.0")]
+        CreativeCommonsAttributionShareAlike_4_0,
+        [Parameter(Value = "cecill-2.1")]
+        CeCILL_2_1,
+        [Parameter(Value = "wtfpl")]
+        DoWhatTheFYouWant,
+        [Parameter(Value = "ecl-2.0")]
+        EducationalCommunity_2_0,
+        [Parameter(Value = "epl-1.0")]
+        EclipsePublic_1_0,
+        [Parameter(Value = "epl-2.0")]
+        EclipsePublic_2_0,
+        [Parameter(Value = "eupl-1.1")]
+        EuropeanUnionPublic_1_1,
+        [Parameter(Value = "eupl-1.2")]
+        EuropeanUnionPublic_1_2,
+        [Parameter(Value = "agpl-3.0")]
+        GNUAfferoGeneralPublic_3_0,
+        [Parameter(Value = "gpl")]
+        GNUGeneralPublic,
+        [Parameter(Value = "gpl-2.0")]
+        GNUGeneralPublic_2_0,
+        [Parameter(Value = "gpl-3.0")]
+        GNUGeneralPublic_3_0,
+        [Parameter(Value = "lgpl")]
+        GNULesserGeneralPublic,
+        [Parameter(Value = "lgpl-2.1")]
+        GNULesserGeneralPublic_2_1,
+        [Parameter(Value = "lgpl-3.0")]
+        GNULesserGeneralPublic_3_0,
+        [Parameter(Value = "isc")]
+        ISC,
+        [Parameter(Value = "lppl-1.3c")]
+        LatexProjectPublic,
+        [Parameter(Value = "ms-pl")]
+        MicrosoftPublic,
+        [Parameter(Value = "ms-rl")]
+        MicrosoftReciprocal,
+        [Parameter(Value = "mit")]
+        MIT,
+        [Parameter(Value = "mpl-2.0")]
+        MozillaPublic_2_0,
+        [Parameter(Value = "odbl-1.0")]
+        ODCOpenDatabase,
+        [Parameter(Value = "osl-3.0")]
+        OpenSoftware_3_0,
+        [Parameter(Value = "postgresql")]
+        PostgreseSQL,
+        [Parameter(Value = "ofl-1.1")]
+        SILOpenFont,
+        [Parameter(Value = "upl-1.0")]
+        UniversalPermissive,
+        [Parameter(Value = "ncsa")]
+        NSCAOpenSource,
+        [Parameter(Value = "unlicense")]
+        TheUnlicense,
+        [Parameter(Value = "vim")]
+        Vim,
+        [Parameter(Value = "zlib")]
+        ZLib
     }
 
     /// <summary>
@@ -775,12 +1019,12 @@ namespace Octokit
         /// <summary>
         /// only search for forked repos
         /// </summary>
-        [Parameter(Value = "Only")]
+        [Parameter(Value = "only")]
         OnlyForks,
         /// <summary>
         /// include forked repos into the search
         /// </summary>
-        [Parameter(Value = "True")]
+        [Parameter(Value = "true")]
         IncludeForks
     }
 }

@@ -67,5 +67,15 @@ namespace Octokit.Tests
         {
             get { return Arg.Any<NewDeployKey>(); }
         }
+
+        public static ApiOptions ApiOptions
+        {
+            get { return Arg.Any<ApiOptions>(); }
+        }
+
+        public static string AnyAcceptHeaders
+        {
+            get { return Arg.Any<string>(); }
+        }
     }
 }

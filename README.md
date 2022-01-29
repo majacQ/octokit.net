@@ -1,11 +1,17 @@
-# Octokit - GitHub API Client Library for .NET 
+# Octokit - GitHub API Client Library for .NET
 
-[![Build status](https://ci.appveyor.com/api/projects/status/cego2g42yw26th26/branch/master?svg=true)](https://ci.appveyor.com/project/github-windows/octokit-net/branch/master) [![Build Status]( https://travis-ci.org/octokit/octokit.net.svg)]( https://travis-ci.org/octokit/octokit.net) [![Join the chat at https://gitter.im/octokit/octokit.net](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/octokit/octokit.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+![Build status](https://github.com/octokit/octokit.net/workflows/CI%20Build/badge.svg)
+[![Build status](https://ci.appveyor.com/api/projects/status/cego2g42yw26th26/branch/main?svg=true)](https://ci.appveyor.com/project/github-windows/octokit-net/branch/main)
+[![codecov](https://codecov.io/gh/octokit/octokit.net/branch/main/graph/badge.svg)](https://codecov.io/gh/octokit/octokit.net)
+[![Join the chat at https://gitter.im/octokit/octokit.net](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/octokit/octokit.net?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![NuGet](http://img.shields.io/nuget/v/Octokit.svg)](https://www.nuget.org/packages/Octokit)
+[![NuGet](http://img.shields.io/nuget/v/Octokit.Reactive.svg)](https://www.nuget.org/packages/Octokit.Reactive)
 
 ![logo](octokit-dotnet_2.png)
 
-Octokit is a client library targeting .NET 4.5 and above that provides an easy
-way to interact with the [GitHub API](http://developer.github.com/v3/).
+Octokit is a client library targeting .NET Framework 4.6 or greater and .NET Standard 2.0
+and above that provides an easy way to interact with the
+[GitHub API](http://developer.github.com/v3/).
 
 ## Usage examples
 
@@ -19,60 +25,62 @@ Console.WriteLine(user.Followers + " folks love the half ogre!");
 
 ## Supported Platforms
 
-* .NET 4.5 (Desktop / Server)
-* Xamarin.iOS / Xamarin.Android / Xamarin.Mac
-* Mono 3.x
-* Windows 8 / 8.1 Store Apps
+* .NET 4.6 (Desktop / Server) or greater
+* [.NET Standard 2.0](https://docs.microsoft.com/en-us/dotnet/standard/net-standard) or greater
 
 ## Getting Started
 
-Octokit is available on NuGet.
+Octokit is a GitHub API client library for .NET and is [available on NuGet](https://www.nuget.org/packages/Octokit/):
 
 ```
-Install-Package Octokit
+dotnet add package Octokit
 ```
-or an IObservable based GitHub API client library for .NET using Reactive Extensions
+
+There is also an IObservable based GitHub API client library for .NET using Reactive Extensions:
 
 ```
-Install-Package Octokit.Reactive
+dotnet add package Octokit.Reactive
 ```
+
+
 ### Beta packages ###
-Unstable NuGet packages that track the master branch of this repository are available at
+Unstable NuGet packages that track the `main` branch of this repository are available at
 [https://ci.appveyor.com/nuget/octokit-net](https://ci.appveyor.com/nuget/octokit-net)
 
 In Xamarin Studio you can find this option under the project's context menu: **Add | Add Packages...***.
 
 ## Documentation
 
-Please see https://github.com/octokit/octokit.net/blob/master/docs/index.md for more detailed documentation.
+Documentation is available at http://octokitnet.readthedocs.io/en/latest/.
 
 ## Build
 
-Octokit is a single assembly designed to be easy to deploy anywhere. If you 
-prefer to compile it yourself, you’ll need:
+Octokit is a single assembly designed to be easy to deploy anywhere.
 
-* Visual Studio 2015 or Xamarin Studio
-* Windows 8.1 or higher to build and test the WinRT projects
-
-To clone it locally click the "Clone in Desktop" button above or run the 
+To clone and build it locally click the "Clone in Desktop" button above or run the
 following git commands.
 
 ```
 git clone git@github.com:octokit/Octokit.net.git Octokit
 cd Octokit
-.\build.cmd
 ```
+
+To build the libraries, run the following command:
+
+Windows: `.\build.ps1`
+
+Linux/OSX: `./build.sh`
 
 ## Contribute
 
-Visit the [Contributor Guidelines](https://github.com/octokit/octokit.net/blob/master/CONTRIBUTING.md) 
-for more details.
+Visit the [Contributor Guidelines](https://github.com/octokit/octokit.net/blob/main/CONTRIBUTING.md)
+for more details. All contributors are expected to follow our
+[Code of Conduct](https://github.com/octokit/octokit.net/blob/main/CODE_OF_CONDUCT.md).
 
 ## Problems?
 
-Octokit is 100% certified to be bug free. If you find an issue with our 
-certification, please visit the [issue tracker](https://github.com/octokit/octokit.net/issues) 
-and report the issue. 
+If you find an issue with our library, please visit the [issue tracker](https://github.com/octokit/octokit.net/issues)
+and report the issue.
 
 Please be kind and search to see if the issue is already logged before creating
 a new one. If you're pressed for time, log it anyways.
@@ -84,16 +92,16 @@ When creating an issue, clearly explain
 * What actually happened.
 * Steps to reproduce the problem.
 
-Also include any other information you think is relevant to reproduce the 
+Also include any other information you think is relevant to reproduce the
 problem.
 
 ## Related Projects
 
- - [ScriptCs.OctoKit](https://github.com/alfhenrik/ScriptCs.OctoKit) - a [script pack](https://github.com/scriptcs/scriptcs/wiki/Script-Packs) to use Octokit in scriptcs 
+ - [ScriptCs.OctoKit](https://github.com/hnrkndrssn/ScriptCs.OctoKit) - a [script pack](https://github.com/scriptcs/scriptcs/wiki/Script-Packs) to use Octokit in scriptcs
  - [ScriptCs.OctokitLibrary](https://github.com/ryanrousseau/ScriptCs.OctokitLibrary) - a [script library](https://github.com/scriptcs/scriptcs/wiki/Script-Libraries) to use Octokit in scriptcs
 
 ## Copyright and License
 
-Copyright 2013 GitHub, Inc.
+Copyright 2017 GitHub, Inc.
 
-Licensed under the [MIT License](https://github.com/octokit/octokit.net/blob/master/LICENSE.txt)
+Licensed under the [MIT License](https://github.com/octokit/octokit.net/blob/main/LICENSE.txt)

@@ -9,16 +9,22 @@ namespace Octokit
     {
         public Branch() { }
 
-        public Branch(string name, GitReference commit)
+        public Branch(string name, GitReference commit, bool @protected)
         {
             Name = name;
             Commit = commit;
+            Protected = @protected;
         }
 
         /// <summary>
         /// Name of this <see cref="Branch"/>.
         /// </summary>
         public string Name { get; protected set; }
+
+        /// <summary>
+        /// Whether this <see cref="Branch"/> is protected. 
+        /// </summary>
+        public bool Protected { get; protected set; }
 
         /// <summary>
         /// The <see cref="GitReference"/> history for this <see cref="Branch"/>.

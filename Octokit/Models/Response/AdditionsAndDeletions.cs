@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using Octokit.Helpers;
 
 namespace Octokit
 {
@@ -28,12 +27,12 @@ namespace Octokit
         /// <exception cref="ArgumentException">If the list of data points is not 3 elements</exception>
         public AdditionsAndDeletions(IList<long> additionsAndDeletions)
         {
-            Ensure.ArgumentNotNull(additionsAndDeletions, "additionsAndDeletions");
+            Ensure.ArgumentNotNull(additionsAndDeletions, nameof(additionsAndDeletions));
             if (additionsAndDeletions.Count != 3)
             {
                 throw new ArgumentException("Addition and deletion aggregate must only contain three data points.");
             }
-            Timestamp = additionsAndDeletions[0].FromUnixTime();
+            Timestamp = DateTimeOffset.FromUnixTimeSeconds(additionsAndDeletions[0]);
             Additions = Convert.ToInt32(additionsAndDeletions[1]);
             Deletions = Convert.ToInt32(additionsAndDeletions[2]);
         }

@@ -25,5 +25,21 @@ public class SearchRepositoryRequestTests
             Assert.True(string.IsNullOrWhiteSpace(request.Sort));
             Assert.False(request.Parameters.ContainsKey("sort"));
         }
+
+        [Fact]
+        public void LanguageUsesParameterTranslation()
+        {
+            var request = new SearchRepositoriesRequest() { Language = Language.CPlusPlus };
+            var result = request.MergedQualifiers();
+            Assert.Contains(result, x => string.Equals(x, "language:\"cpp\""));
+        }
+
+        [Fact]
+        public void LicenseUsesParameterTranslation()
+        {
+            var request = new SearchRepositoriesRequest() { License = RepoSearchLicense.Apache_2_0 };
+            var result = request.MergedQualifiers();
+            Assert.Contains(result, x => string.Equals(x, "license:apache-2.0"));
+        }
     }
 }
