@@ -11,7 +11,7 @@ using Xunit;
 namespace Octokit.Tests.Clients
 {
     /// <summary>
-    /// Client tests mostly just need to make sure they call the IApiConnection with the correct 
+    /// Client tests mostly just need to make sure they call the IApiConnection with the correct
     /// relative Uri. No need to fake up the response. All *those* tests are in ApiConnectionTests.cs.
     /// </summary>
     public class AuthorizationsClientTests
@@ -126,8 +126,9 @@ namespace Octokit.Tests.Clients
 
                 authEndpoint.GetOrCreateApplicationAuthentication("clientId", "secret", data);
 
-                client.Received().Put<ApplicationAuthorization>(Arg.Is<Uri>(u => u.ToString() == "authorizations/clients/clientId"),
-                    Args.Object);
+                client.Received().Put<ApplicationAuthorization>(
+                    Arg.Is<Uri>(u => u.ToString() == "authorizations/clients/clientId"),
+                    Arg.Is<Object>(o => o.GetType().GetProperty("client_secret").GetValue(o).ToString() == "secret"));
             }
 
             [Fact]
@@ -141,7 +142,7 @@ namespace Octokit.Tests.Clients
 
                 client.Received().Put<ApplicationAuthorization>(
                     Arg.Is<Uri>(u => u.ToString() == "authorizations/clients/clientId"),
-                    Args.Object,
+                    Arg.Is<Object>(o => o.GetType().GetProperty("client_secret").GetValue(o).ToString() == "secret"),
                     "two-factor");
             }
 
@@ -290,9 +291,10 @@ namespace Octokit.Tests.Clients
 
                 authEndpoint.CheckApplicationAuthentication("clientId", "accessToken");
 
-                client.Received().Get<ApplicationAuthorization>(
-                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/tokens/accessToken"),
-                    null);
+                client.Received().Post<ApplicationAuthorization>(
+                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/token"),
+                    Arg.Is<Object>(o => o.GetType().GetProperty("access_token").GetValue(o).ToString() == "accessToken"),
+                    "application/vnd.github.doctor-strange-preview+json");
             }
 
             [Fact]
@@ -318,9 +320,10 @@ namespace Octokit.Tests.Clients
 
                 authEndpoint.ResetApplicationAuthentication("clientId", "accessToken");
 
-                client.Received().Post<ApplicationAuthorization>(
-                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/tokens/accessToken"),
-                    Args.Object);
+                client.Received().Patch<ApplicationAuthorization>(
+                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/token"),
+                    Arg.Is<Object>(o => o.GetType().GetProperty("access_token").GetValue(o).ToString() == "accessToken"),
+                    "application/vnd.github.doctor-strange-preview+json");
             }
 
             [Fact]
@@ -347,7 +350,9 @@ namespace Octokit.Tests.Clients
                 authEndpoint.RevokeApplicationAuthentication("clientId", "accessToken");
 
                 client.Received().Delete(
-                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/tokens/accessToken"));
+                    Arg.Is<Uri>(u => u.ToString() == "applications/clientId/token"),
+                    Arg.Is<Object>(o => o.GetType().GetProperty("access_token").GetValue(o).ToString() == "accessToken"),
+                    "application/vnd.github.doctor-strange-preview+json");
             }
 
             [Fact]
